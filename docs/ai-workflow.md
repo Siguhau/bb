@@ -96,3 +96,36 @@ Frontend: Vite react
 ### md file creation
 
 One back and fourth later. I asked it to generated the Architecture.md which it did and I reviewed it. I was happy with the output and moved forth.
+
+## Basic project setup
+
+With the architecture ready and a basic idea of the tech stack, I prompted the AI to setup the basic project structure. This was partially a mistake, I was too wide in my request. However it did a good job, so in the end I was quite happy.
+
+There was two issues though, I had forgot to say that I wanted to use TypeScript, which it weirdly never asked for. And I also wanted to use PNPM, this one I was not suprised it did not recommend. I steered the workers and they added them.
+
+This shows the risk of using AI to provide a basic set up rules. Some things that is a bit personal to me would not necessarily be added.
+
+To review the project setup, I now started using github, since I like the review happening in the PR view. I tasked the AI to split the changes into three PRs: Root level, Frontend and Backend linked using GH stacked PRs that I have the skill for.
+
+### Prompts
+
+please create the basic project structure.
+
+steer:
+use typescript
+use pnpm
+
+Create three PRs for the changes on initial project setup: On for root level changes. One for Frontend and One for backend.
+Link all of the PRs using Github stacked PR. use the gh-stack skill
+branch name template:
+feature/"repo/fe/be"/init setup
+Keep the description minimal
+i will push the changes, give me all commands to do them myself
+
+### Review
+
+Splitting the changes into PRs makes it, in my opinion way easier to review, even thought it does not change much from one change with everything. It just keeps it more logical and lowers risk, as the sizes are lower and easy to separate.
+
+I ran the backend and frontend before merging, and ran the tests.
+
+The complete project setup is now done. It took a lot of time 😅
