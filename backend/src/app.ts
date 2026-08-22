@@ -13,6 +13,10 @@ export function createApp(): Express {
   const app = express();
 
   app.disable('x-powered-by');
+  const trustedProxyHops = Number(process.env.TRUST_PROXY_HOPS ?? 0);
+  if (Number.isInteger(trustedProxyHops) && trustedProxyHops > 0) {
+    app.set('trust proxy', trustedProxyHops);
+  }
   app.use(express.json());
 
   app.get('/api/health', (_request: Request, response: Response) => {
