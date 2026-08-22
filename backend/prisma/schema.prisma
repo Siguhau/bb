@@ -7,4 +7,60 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Domain models are added with the first feature migration.
+// Dates that represent a shop day are stored as ISO calendar-date strings
+// (YYYY-MM-DD). Timestamps remain UTC DateTime values.
+model Order {
+  id              String   @id @default(cuid())
+  reference       String   @unique
+  customerName    String
+  phoneNumber     String
+  emailAddress    String
+  bikeBrand       String
+  expectedDueDate String
+  status          String   @default("NEW")
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  serviceTypes        OrderService[]
+  capacityReservation CapacityReservation?
+
+  @@unique([id, expectedDueDate])
+  @@index([emailAddress])
+  @@index([phoneNumber])
+  @@index([status])
+  @@index([expectedDueDate])
+}
+
+// Service types are normalized so an order can select one or more supported
+// services without storing a repeated value on the order record.
+model ServiceType {
+  code        String         @id
+  displayName String
+  orderLinks  OrderService[]
+}
+
+model OrderService {
+  orderId         String
+  serviceTypeCode String
+
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  serviceType ServiceType @relation(fields: [serviceTypeCode], references: [code], onDelete: Restrict)
+
+  @@id([orderId, serviceTypeCode])
+  @@index([serviceTypeCode])
+}
+
+// A non-cancelled order owns exactly one reservation. The unique date/slot
+// pair is the database-level concurrency boundary for the five-order limit.
+model CapacityReservation {
+  orderId String
+  dueDate String
+  slot    Int
+
+  order Order @relation(fields: [orderId, dueDate], references: [id, expectedDueDate], onDelete: Cascade)
+
+  @@id([orderId])
+  @@unique([orderId, dueDate])
+  @@unique([dueDate, slot])
+}
