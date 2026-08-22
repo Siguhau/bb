@@ -1,5 +1,6 @@
 import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import AdminPage from './pages/AdminPage'
+import CustomerOrderPage from './pages/CustomerOrderPage'
 import CustomerPage from './pages/CustomerPage'
 import { themeStyle } from './theme'
 
@@ -19,6 +20,7 @@ export default function App() {
         </header>
         <Routes>
           <Route path="/customer" element={<CustomerPage />} />
+          <Route path="/customer/orders/new" element={<CustomerOrderPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/customer" replace />} />
         </Routes>
