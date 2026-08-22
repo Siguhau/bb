@@ -9,11 +9,14 @@
     "start": "pnpm --filter bouvet-bike-backend start",
     "db:generate": "pnpm --filter bouvet-bike-backend db:generate",
     "db:migrate": "pnpm --filter bouvet-bike-backend db:migrate",
+    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx}\"",
     "typecheck": "pnpm --recursive --if-present run typecheck",
     "test": "pnpm --recursive --if-present run test"
   },
   "devDependencies": {
-    "concurrently": "^9.2.4"
+    "concurrently": "^9.2.4",
+    "prettier": "^3.9.6"
   },
   "engines": {
     "node": ">=22.12.0"
