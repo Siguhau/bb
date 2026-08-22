@@ -1,15 +1,28 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 import AdminPage from './pages/AdminPage'
 import CustomerPage from './pages/CustomerPage'
+import { themeStyle } from './theme'
 
 export default function App() {
   return (
-    <main className="app-shell">
-      <Routes>
-        <Route path="/customer" element={<CustomerPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="*" element={<Navigate to="/customer" replace />} />
-      </Routes>
+    <main className="app-shell" style={themeStyle}>
+      <div className="page-frame">
+        <header className="site-header">
+          <Link className="brand" to="/customer">
+            Bouvet <span className="brand-mark">Bike</span>
+          </Link>
+          <nav aria-label="Primary navigation">
+            <NavLink className="route-link" to="/admin">
+              Administrator access
+            </NavLink>
+          </nav>
+        </header>
+        <Routes>
+          <Route path="/customer" element={<CustomerPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={<Navigate to="/customer" replace />} />
+        </Routes>
+      </div>
     </main>
   )
 }

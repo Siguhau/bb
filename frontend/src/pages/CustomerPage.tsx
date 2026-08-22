@@ -3,7 +3,9 @@ export default function CustomerPage() {
     <section className="page-card">
       <p className="eyebrow">Bike service</p>
       <h1>Book a service</h1>
-      <p>Customer booking and order lookup will be available here.</p>
+      <p className="page-intro">
+        Customer booking and order lookup will be available here.
+      </p>
     </section>
   )
 }
