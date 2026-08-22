@@ -39,6 +39,17 @@ pnpm dev
 The frontend runs at `http://localhost:5173` and proxies API requests to the
 backend at `http://localhost:3000`.
 
+## Running tests
+
+After completing the setup steps, run all workspace test suites from the
+project root:
+
+```sh
+pnpm test
+```
+
+This currently runs the backend Vitest suite.
+
 ## Production-style run
 
 ```sh
