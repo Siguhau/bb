@@ -28,6 +28,7 @@ interface at `/admin`. Both use the same Express API and SQLite database.
 pnpm install
 cp backend/.env.example backend/.env
 pnpm db:generate
+pnpm db:migrate
 ```
 
 ## Local development
