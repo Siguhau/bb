@@ -155,6 +155,12 @@ The following operations run in a single database transaction:
 - Cancelling an order and releasing its capacity reservation.
 - Reopening a cancelled order and reserving capacity again.
 
+A cancelled order may have its stored due date changed to another weekday even
+when that date is currently full, because it does not own a capacity reservation.
+Capacity is checked and reserved if the order is later reopened. This keeps the
+final-state invariant explicit: an order has one reservation matching its due
+date if and only if its status is not `Cancelled`.
+
 If any part fails, the entire operation is rolled back. Weekends are rejected and
 all date calculations use the configured shop timezone. Timestamps are stored in
 UTC, while an expected due date is stored as a calendar date.
