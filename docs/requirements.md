@@ -176,3 +176,10 @@ Automated tests must cover at least:
 - Only a cancelled order can be permanently deleted, and deletion requires confirmation.
 - A permanently deleted order is no longer retrievable from the live system by customers or administrators.
 - A failed database operation is reported as a failure and does not create or partially update an order.
+
+## Priorities - Tasks
+
+1. Create the orders model
+2. Create the basic theme
+3. Create the customer landing page where they can either search for their order or place a new order
+4. Create the view where customers can create an order
