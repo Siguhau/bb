@@ -1,0 +1,237 @@
+import express from 'express';
+import request from 'supertest';
+import { describe, expect, it, vi } from 'vitest';
+
+import { createLookupRateLimiter } from '../middleware/lookup-rate-limit.js';
+import type { CustomerOrder } from '../services/lookup-orders.js';
+import {
+  OrderSubmissionValidationError,
+  type SubmittedOrder,
+} from '../services/submit-order.js';
+import { createCustomerRouter } from './customer.js';
+
+const matchingOrder: CustomerOrder = {
+  id: 'order-1',
+  reference: 'A1B2C3D4',
+  customerName: 'Ada Lovelace',
+  phoneNumber: '+47 123 45 678',
+  emailAddress: 'ada@example.com',
+  bikeBrand: 'Trek',
+  expectedDueDate: '2026-08-24',
+  status: 'NEW',
+  notes: null,
+  createdAt: new Date('2026-08-22T08:00:00Z'),
+  updatedAt: new Date('2026-08-22T08:00:00Z'),
+  serviceTypes: [{ code: 'BRAKE_MAINTENANCE', displayName: 'Brake maintenance' }],
+};
+
+function testApp(
+  findOrders: (value: string) => Promise<CustomerOrder[]>,
+  attemptLimit = 5,
+  trustProxyHops = 0,
+  createOrder?: (value: unknown) => Promise<SubmittedOrder>,
+) {
+  const app = express();
+  if (trustProxyHops > 0) app.set('trust proxy', trustProxyHops);
+  app.use(express.json());
+  app.use('/api/customer', createCustomerRouter({
+    createOrder,
+    findOrders,
+    issueAccessGrant: (orderIds) => ({
+      token: `grant-for-${orderIds.join('-')}`,
+      expiresAt: '2026-08-22T09:00:00.000Z',
+    }),
+    rateLimiter: createLookupRateLimiter({ attemptLimit, blockDurationMs: 60_000 }),
+  }));
+  return app;
+}
+
+const submittedOrder: SubmittedOrder = {
+  id: 'order-1',
+  reference: 'A1B2C3D4',
+  customerName: 'Ada Lovelace',
+  phoneNumber: '+47 123 45 678',
+  emailAddress: 'ada@example.com',
+  bikeBrand: 'Trek',
+  expectedDueDate: '2026-08-24',
+  status: 'NEW',
+  notes: null,
+  serviceTypes: [{ code: 'BRAKE_MAINTENANCE', displayName: 'Brake maintenance' }],
+};
+
+describe('GET /api/customer/order-options', () => {
+  it('returns the backend-authoritative service catalog', async () => {
+    const response = await request(testApp(async () => []))
+      .get('/api/customer/order-options');
+
+    expect(response.status).toBe(200);
+    expect(response.body.serviceTypes).toEqual([
+      { code: 'WHEEL_ADJUSTMENT', displayName: 'Wheel adjustment' },
+      { code: 'CHAIN_REPLACEMENT', displayName: 'Chain replacement' },
+      { code: 'BRAKE_MAINTENANCE', displayName: 'Brake maintenance' },
+    ]);
+  });
+});
+
+describe('POST /api/customer/orders', () => {
+  it('returns the stored order after a successful submission', async () => {
+    const createOrder = vi.fn().mockResolvedValue(submittedOrder);
+    const input = {
+      customerName: 'Ada Lovelace',
+      phoneNumber: '+47 123 45 678',
+      emailAddress: 'ada@example.com',
+      bikeBrand: 'Trek',
+      serviceTypes: ['BRAKE_MAINTENANCE'],
+    };
+
+    const response = await request(testApp(async () => [], 5, 0, createOrder))
+      .post('/api/customer/orders')
+      .send(input);
+
+    expect(response.status).toBe(201);
+    expect(createOrder).toHaveBeenCalledWith(input);
+    expect(response.body).toEqual({ order: JSON.parse(JSON.stringify(submittedOrder)) });
+  });
+
+  it('returns field errors for invalid submissions', async () => {
+    const createOrder = vi.fn().mockRejectedValue(new OrderSubmissionValidationError({
+      emailAddress: 'Enter a valid email address.',
+    }));
+
+    const response = await request(testApp(async () => [], 5, 0, createOrder))
+      .post('/api/customer/orders')
+      .send({ emailAddress: 'invalid' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: 'Check the highlighted fields and try again.',
+      fields: { emailAddress: 'Enter a valid email address.' },
+    });
+  });
+
+  it('does not expose persistence details when submission fails', async () => {
+    const createOrder = vi.fn().mockRejectedValue(new Error('database path and customer data'));
+
+    const response = await request(testApp(async () => [], 5, 0, createOrder))
+      .post('/api/customer/orders')
+      .send({ customerName: 'Ada' });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({
+      error: 'We could not place your order. Please try again.',
+    });
+  });
+});
+
+describe('POST /api/customer/order-lookups', () => {
+  it('returns every exact match as a separate customer-safe order', async () => {
+    const findOrders = vi.fn().mockResolvedValue([
+      matchingOrder,
+      { ...matchingOrder, id: 'order-2', reference: 'E5F6G7H8' },
+    ]);
+
+    const response = await request(testApp(findOrders))
+      .post('/api/customer/order-lookups')
+      .send({ value: 'ada@example.com' });
+
+    expect(response.status).toBe(200);
+    expect(findOrders).toHaveBeenCalledWith('ada@example.com');
+    expect(response.body.orders).toHaveLength(2);
+    expect(response.body.accessGrant).toEqual({
+      token: 'grant-for-order-1-order-2',
+      expiresAt: '2026-08-22T09:00:00.000Z',
+    });
+    expect(response.body.orders[0]).toMatchObject({
+      reference: 'A1B2C3D4',
+      serviceTypes: [{ code: 'BRAKE_MAINTENANCE', displayName: 'Brake maintenance' }],
+    });
+  });
+
+  it('uses a generic response when no order matches', async () => {
+    const response = await request(testApp(async () => []))
+      .post('/api/customer/order-lookups')
+      .send({ value: 'missing@example.com' });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: 'No matching orders were found.' });
+  });
+
+  it('temporarily blocks a client after repeated unsuccessful attempts', async () => {
+    const app = testApp(async () => [], 2);
+
+    await request(app).post('/api/customer/order-lookups').send({ value: 'first' });
+    await request(app).post('/api/customer/order-lookups').send({ value: 'second' });
+    const response = await request(app)
+      .post('/api/customer/order-lookups')
+      .send({ value: 'third' });
+
+    expect(response.status).toBe(429);
+    expect(response.body).toEqual({
+      error: 'Order lookup is temporarily unavailable. Please try again later.',
+    });
+  });
+
+  it('limits total attempts even when a successful lookup occurs between misses', async () => {
+    const findOrders = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([matchingOrder])
+      .mockResolvedValueOnce([]);
+    const app = testApp(findOrders, 2);
+
+    await request(app).post('/api/customer/order-lookups').send({ value: 'first' });
+    await request(app).post('/api/customer/order-lookups').send({ value: 'A1B2C3D4' });
+    const response = await request(app)
+      .post('/api/customer/order-lookups')
+      .send({ value: 'third' });
+
+    expect(response.status).toBe(429);
+    expect(findOrders).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps rate limits separate for clients behind a configured trusted proxy', async () => {
+    const app = testApp(async () => [], 1, 1);
+
+    await request(app)
+      .post('/api/customer/order-lookups')
+      .set('X-Forwarded-For', '192.0.2.1')
+      .send({ value: 'first' });
+    const blockedResponse = await request(app)
+      .post('/api/customer/order-lookups')
+      .set('X-Forwarded-For', '192.0.2.1')
+      .send({ value: 'second' });
+    const otherClientResponse = await request(app)
+      .post('/api/customer/order-lookups')
+      .set('X-Forwarded-For', '192.0.2.2')
+      .send({ value: 'first' });
+
+    expect(blockedResponse.status).toBe(429);
+    expect(otherClientResponse.status).toBe(404);
+  });
+
+  it('rejects missing and oversized lookup values without searching', async () => {
+    const findOrders = vi.fn().mockResolvedValue([]);
+    const app = testApp(findOrders);
+
+    const missingResponse = await request(app).post('/api/customer/order-lookups').send({});
+    const oversizedResponse = await request(app)
+      .post('/api/customer/order-lookups')
+      .send({ value: 'a'.repeat(255) });
+
+    expect(missingResponse.status).toBe(400);
+    expect(oversizedResponse.status).toBe(400);
+    expect(findOrders).not.toHaveBeenCalled();
+  });
+
+  it('reports lookup failures without exposing database details', async () => {
+    const response = await request(testApp(async () => {
+      throw new Error('database path and customer data');
+    }))
+      .post('/api/customer/order-lookups')
+      .send({ value: 'A1B2C3D4' });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({
+      error: 'We could not search for orders. Please try again.',
+    });
+  });
+});
