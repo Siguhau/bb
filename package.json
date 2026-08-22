@@ -1,0 +1,21 @@
+{
+  "name": "bouvet-bike",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.14.0",
+  "scripts": {
+    "dev": "concurrently --names frontend,backend --prefix-colors cyan,green \"pnpm --filter bouvet-bike-frontend dev\" \"pnpm --filter bouvet-bike-backend dev\"",
+    "build": "pnpm --filter bouvet-bike-frontend build && pnpm --filter bouvet-bike-backend build",
+    "start": "pnpm --filter bouvet-bike-backend start",
+    "db:generate": "pnpm --filter bouvet-bike-backend db:generate",
+    "db:migrate": "pnpm --filter bouvet-bike-backend db:migrate",
+    "typecheck": "pnpm --recursive --if-present run typecheck",
+    "test": "pnpm --recursive --if-present run test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
