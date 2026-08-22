@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from "node:crypto";
 
 export type CustomerAccessGrant = {
   token: string;
@@ -14,13 +14,18 @@ const grants = new Map<string, StoredGrant>();
 
 function positiveInteger(value: string | undefined, fallback: number): number {
   const parsedValue = Number(value);
-  return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+  return Number.isInteger(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallback;
 }
 
-export function issueCustomerAccessGrant(orderIds: string[]): CustomerAccessGrant {
-  const token = randomBytes(32).toString('base64url');
-  const expiresAt = Date.now()
-    + positiveInteger(process.env.CUSTOMER_ACCESS_GRANT_TTL_SECONDS, 900) * 1_000;
+export function issueCustomerAccessGrant(
+  orderIds: string[],
+): CustomerAccessGrant {
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt =
+    Date.now() +
+    positiveInteger(process.env.CUSTOMER_ACCESS_GRANT_TTL_SECONDS, 900) * 1_000;
 
   grants.set(token, { orderIds: new Set(orderIds), expiresAt });
 

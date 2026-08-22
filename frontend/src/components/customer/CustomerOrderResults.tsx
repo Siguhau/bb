@@ -1,12 +1,15 @@
-import type { CustomerOrder } from '../../types/customer'
-import CustomerOrderCard from './CustomerOrderCard'
+import type { CustomerOrder } from "../../types/customer";
+import CustomerOrderCard from "./CustomerOrderCard";
 
 type CustomerOrderResultsProps = {
-  error: string
-  orders: CustomerOrder[]
-}
+  error: string;
+  orders: CustomerOrder[];
+};
 
-export default function CustomerOrderResults({ error, orders }: CustomerOrderResultsProps) {
+export default function CustomerOrderResults({
+  error,
+  orders,
+}: CustomerOrderResultsProps) {
   return (
     <div className="lookup-feedback" aria-live="polite">
       {error && <p className="error-message">{error}</p>}
@@ -14,10 +17,12 @@ export default function CustomerOrderResults({ error, orders }: CustomerOrderRes
         <section aria-labelledby="results-heading">
           <h2 id="results-heading">Your orders</h2>
           <div className="order-results">
-            {orders.map((order) => <CustomerOrderCard key={order.id} order={order} />)}
+            {orders.map((order) => (
+              <CustomerOrderCard key={order.id} order={order} />
+            ))}
           </div>
         </section>
       )}
     </div>
-  )
+  );
 }

@@ -71,12 +71,15 @@ export function createLookupRateLimiter({
 
 function positiveInteger(value: string | undefined, fallback: number): number {
   const parsedValue = Number(value);
-  return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+  return Number.isInteger(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : fallback;
 }
 
 export function createConfiguredLookupRateLimiter(): LookupRateLimiter {
   return createLookupRateLimiter({
     attemptLimit: positiveInteger(process.env.LOOKUP_ATTEMPT_LIMIT, 5),
-    blockDurationMs: positiveInteger(process.env.LOOKUP_BLOCK_DURATION_SECONDS, 900) * 1_000,
+    blockDurationMs:
+      positiveInteger(process.env.LOOKUP_BLOCK_DURATION_SECONDS, 900) * 1_000,
   });
 }

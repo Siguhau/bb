@@ -1,11 +1,11 @@
-import type { SubmitEvent } from 'react'
+import type { SubmitEvent } from "react";
 
 type OrderLookupCardProps = {
-  isSearching: boolean
-  lookupValue: string
-  onLookupValueChange: (value: string) => void
-  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void
-}
+  isSearching: boolean;
+  lookupValue: string;
+  onLookupValueChange: (value: string) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
+};
 
 export default function OrderLookupCard({
   isSearching,
@@ -31,10 +31,14 @@ export default function OrderLookupCard({
           type="text"
           value={lookupValue}
         />
-        <button className="button button-primary" disabled={isSearching} type="submit">
-          {isSearching ? 'Searching…' : 'Find order'}
+        <button
+          className="button button-primary"
+          disabled={isSearching}
+          type="submit"
+        >
+          {isSearching ? "Searching…" : "Find order"}
         </button>
       </form>
     </section>
-  )
+  );
 }

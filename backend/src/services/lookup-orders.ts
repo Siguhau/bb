@@ -1,6 +1,6 @@
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from "@prisma/client";
 
-import { prisma } from '../infrastructure/prisma.js';
+import { prisma } from "../infrastructure/prisma.js";
 
 const orderSelection = {
   id: true,
@@ -26,9 +26,12 @@ const orderSelection = {
   },
 } as const;
 
-type OrderLookupClient = Pick<PrismaClient, 'order'>;
+type OrderLookupClient = Pick<PrismaClient, "order">;
 
-export async function lookupOrders(value: string, client: OrderLookupClient = prisma) {
+export async function lookupOrders(
+  value: string,
+  client: OrderLookupClient = prisma,
+) {
   const orders = await client.order.findMany({
     where: {
       OR: [
@@ -38,7 +41,7 @@ export async function lookupOrders(value: string, client: OrderLookupClient = pr
       ],
     },
     select: orderSelection,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   return orders.map(({ serviceTypes, ...order }) => ({

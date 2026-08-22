@@ -1,8 +1,8 @@
-import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom'
-import AdminPage from './pages/AdminPage'
-import CustomerOrderPage from './pages/CustomerOrderPage'
-import CustomerPage from './pages/CustomerPage'
-import { themeStyle } from './theme'
+import { Link, Navigate, NavLink, Route, Routes } from "react-router-dom";
+import AdminPage from "./pages/AdminPage";
+import CustomerOrderPage from "./pages/CustomerOrderPage";
+import CustomerPage from "./pages/CustomerPage";
+import { themeStyle } from "./theme";
 
 export default function App() {
   return (
@@ -26,5 +26,5 @@ export default function App() {
         </Routes>
       </div>
     </main>
-  )
+  );
 }

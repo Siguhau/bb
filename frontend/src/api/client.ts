@@ -1,11 +1,14 @@
 type ApiErrorBody = {
-  error?: string
-  fields?: Record<string, string>
-}
+  error?: string;
+  fields?: Record<string, string>;
+};
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly fields: Record<string, string> = {}) {
-    super(message)
+  constructor(
+    message: string,
+    public readonly fields: Record<string, string> = {},
+  ) {
+    super(message);
   }
 }
 
@@ -14,24 +17,24 @@ export async function requestJson<T>(
   options: RequestInit | undefined,
   fallbackError: string,
 ): Promise<T> {
-  let response: Response
-  let body: T & ApiErrorBody
+  let response: Response;
+  let body: T & ApiErrorBody;
 
   try {
-    response = await fetch(path, options)
+    response = await fetch(path, options);
   } catch {
-    throw new ApiError(fallbackError)
+    throw new ApiError(fallbackError);
   }
 
   try {
-    body = await response.json() as T & ApiErrorBody
+    body = (await response.json()) as T & ApiErrorBody;
   } catch {
-    throw new ApiError(fallbackError)
+    throw new ApiError(fallbackError);
   }
 
   if (!response.ok) {
-    throw new ApiError(body.error ?? fallbackError, body.fields)
+    throw new ApiError(body.error ?? fallbackError, body.fields);
   }
 
-  return body
+  return body;
 }

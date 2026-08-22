@@ -7,5 +7,5 @@ export default function AdminPage() {
         Secure sign-in and order management will be available here.
       </p>
     </section>
-  )
+  );
 }
