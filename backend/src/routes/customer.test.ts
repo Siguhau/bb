@@ -8,6 +8,11 @@ import {
   OrderSubmissionValidationError,
   type SubmittedOrder,
 } from "../services/submit-order.js";
+import {
+  CustomerNotesValidationError,
+  CustomerOrderNotEditableError,
+  CustomerOrderNotFoundError,
+} from "../services/update-customer-notes.js";
 import { createCustomerRouter } from "./customer.js";
 
 const matchingOrder: CustomerOrder = {
@@ -47,6 +52,33 @@ function testApp(
       }),
       rateLimiter: createLookupRateLimiter({
         attemptLimit,
+        blockDurationMs: 60_000,
+      }),
+    }),
+  );
+  return app;
+}
+
+function notesTestApp({
+  accessGrantAllowsOrder = vi.fn().mockReturnValue(true),
+  updateNotes = vi.fn().mockResolvedValue({
+    ...matchingOrder,
+    notes: "Leave by the side door",
+  }),
+}: {
+  accessGrantAllowsOrder?: (token: string, orderId: string) => boolean;
+  updateNotes?: (orderId: string, value: unknown) => Promise<CustomerOrder>;
+} = {}) {
+  const app = express();
+  app.use(express.json());
+  app.use(
+    "/api/customer",
+    createCustomerRouter({
+      accessGrantAllowsOrder,
+      findOrders: async () => [],
+      updateNotes,
+      rateLimiter: createLookupRateLimiter({
+        attemptLimit: 5,
         blockDurationMs: 60_000,
       }),
     }),
@@ -168,6 +200,25 @@ describe("POST /api/customer/order-lookups", () => {
     });
   });
 
+  it("continues to return completed and cancelled orders with a scoped grant", async () => {
+    const findOrders = vi.fn().mockResolvedValue([
+      { ...matchingOrder, id: "completed", status: "COMPLETED" },
+      { ...matchingOrder, id: "cancelled", status: "CANCELLED" },
+    ]);
+
+    const response = await request(testApp(findOrders))
+      .post("/api/customer/order-lookups")
+      .send({ value: "ada@example.com" });
+
+    expect(response.status).toBe(200);
+    expect(
+      response.body.orders.map(({ status }: CustomerOrder) => status),
+    ).toEqual(["COMPLETED", "CANCELLED"]);
+    expect(response.body.accessGrant.token).toBe(
+      "grant-for-completed-cancelled",
+    );
+  });
+
   it("uses a generic response when no order matches", async () => {
     const response = await request(testApp(async () => []))
       .post("/api/customer/order-lookups")
@@ -266,6 +317,146 @@ describe("POST /api/customer/order-lookups", () => {
     expect(response.status).toBe(500);
     expect(response.body).toEqual({
       error: "We could not search for orders. Please try again.",
+    });
+  });
+});
+
+describe("PATCH /api/customer/orders/:id/notes", () => {
+  it("uses the exact order-scoped bearer grant and returns the persisted order", async () => {
+    const accessGrantAllowsOrder = vi.fn().mockReturnValue(true);
+    const updatedOrder = { ...matchingOrder, notes: "Leave by the side door" };
+    const updateNotes = vi.fn().mockResolvedValue(updatedOrder);
+
+    const response = await request(
+      notesTestApp({ accessGrantAllowsOrder, updateNotes }),
+    )
+      .patch("/api/customer/orders/order-1/notes")
+      .set("Authorization", "Bearer valid_grant-1")
+      .send({ notes: " Leave by the side door " });
+
+    expect(response.status).toBe(200);
+    expect(accessGrantAllowsOrder).toHaveBeenCalledWith(
+      "valid_grant-1",
+      "order-1",
+    );
+    expect(updateNotes).toHaveBeenCalledWith("order-1", {
+      notes: " Leave by the side door ",
+    });
+    expect(response.body).toEqual({
+      order: JSON.parse(JSON.stringify(updatedOrder)),
+    });
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["malformed", "Basic abc"],
+    ["empty", "Bearer "],
+  ])(
+    "rejects a %s grant without attempting persistence",
+    async (_name, header) => {
+      const accessGrantAllowsOrder = vi.fn().mockReturnValue(true);
+      const updateNotes = vi.fn();
+      let pendingRequest = request(
+        notesTestApp({ accessGrantAllowsOrder, updateNotes }),
+      )
+        .patch("/api/customer/orders/order-1/notes")
+        .send({ notes: "Changed" });
+      if (header) pendingRequest = pendingRequest.set("Authorization", header);
+
+      const response = await pendingRequest;
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toContain("Look up the order again");
+      expect(accessGrantAllowsOrder).not.toHaveBeenCalled();
+      expect(updateNotes).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["invalid", "expired", "wrong-order"])(
+    "rejects an %s or unscoped grant with the same safe response",
+    async () => {
+      const accessGrantAllowsOrder = vi.fn().mockReturnValue(false);
+      const updateNotes = vi.fn();
+
+      const response = await request(
+        notesTestApp({ accessGrantAllowsOrder, updateNotes }),
+      )
+        .patch("/api/customer/orders/order-1/notes")
+        .set("Authorization", "Bearer unavailable-token")
+        .send({ notes: "Changed" });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toContain("Look up the order again");
+      expect(updateNotes).not.toHaveBeenCalled();
+    },
+  );
+
+  it("returns field-safe validation errors", async () => {
+    const updateNotes = vi.fn().mockRejectedValue(
+      new CustomerNotesValidationError({
+        notes: "Notes must be 2000 characters or fewer.",
+      }),
+    );
+
+    const response = await request(notesTestApp({ updateNotes }))
+      .patch("/api/customer/orders/order-1/notes")
+      .set("Authorization", "Bearer valid-token")
+      .send({ notes: "n".repeat(2_001) });
+
+    expect(response.status).toBe(400);
+    expect(response.body.fields).toEqual({
+      notes: "Notes must be 2000 characters or fewer.",
+    });
+  });
+
+  it.each([
+    "IN_PROGRESS",
+    "WAITING_FOR_CUSTOMER_PICKUP",
+    "COMPLETED",
+    "CANCELLED",
+  ])("rejects notes changes when the persisted order is %s", async () => {
+    const updateNotes = vi
+      .fn()
+      .mockRejectedValue(new CustomerOrderNotEditableError());
+
+    const response = await request(notesTestApp({ updateNotes }))
+      .patch("/api/customer/orders/order-1/notes")
+      .set("Authorization", "Bearer valid-token")
+      .send({ notes: "Changed" });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      error: "Notes can only be changed while the order is New.",
+    });
+  });
+
+  it("returns a safe not-found error when a looked-up order was removed", async () => {
+    const updateNotes = vi
+      .fn()
+      .mockRejectedValue(new CustomerOrderNotFoundError());
+
+    const response = await request(notesTestApp({ updateNotes }))
+      .patch("/api/customer/orders/order-1/notes")
+      .set("Authorization", "Bearer valid-token")
+      .send({ notes: "Changed" });
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: "Order not found." });
+  });
+
+  it("does not expose persistence details", async () => {
+    const updateNotes = vi
+      .fn()
+      .mockRejectedValue(new Error("database path and customer data"));
+
+    const response = await request(notesTestApp({ updateNotes }))
+      .patch("/api/customer/orders/order-1/notes")
+      .set("Authorization", "Bearer valid-token")
+      .send({ notes: "Changed" });
+
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({
+      error: "We could not update your notes. Please try again.",
     });
   });
 });

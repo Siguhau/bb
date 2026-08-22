@@ -4,11 +4,14 @@ import { ApiError } from "../api/client";
 import { lookupCustomerOrders } from "../api/customer";
 import CustomerOrderResults from "../components/customer/CustomerOrderResults";
 import OrderLookupCard from "../components/customer/OrderLookupCard";
-import type { CustomerOrder } from "../types/customer";
+import type { CustomerAccessGrant, CustomerOrder } from "../types/customer";
 
 export default function CustomerPage() {
   const [lookupValue, setLookupValue] = useState("");
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [accessGrant, setAccessGrant] = useState<CustomerAccessGrant | null>(
+    null,
+  );
   const [error, setError] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
@@ -16,10 +19,13 @@ export default function CustomerPage() {
     event.preventDefault();
     setError("");
     setOrders([]);
+    setAccessGrant(null);
     setIsSearching(true);
 
     try {
-      setOrders(await lookupCustomerOrders(lookupValue));
+      const result = await lookupCustomerOrders(lookupValue);
+      setOrders(result.orders);
+      setAccessGrant(result.accessGrant);
     } catch (error) {
       setError(
         error instanceof ApiError
@@ -70,7 +76,18 @@ export default function CustomerPage() {
         </div>
       </section>
 
-      <CustomerOrderResults error={error} orders={orders} />
+      <CustomerOrderResults
+        accessGrant={accessGrant}
+        error={error}
+        onOrderUpdated={(updatedOrder) =>
+          setOrders((currentOrders) =>
+            currentOrders.map((order) =>
+              order.id === updatedOrder.id ? updatedOrder : order,
+            ),
+          )
+        }
+        orders={orders}
+      />
     </>
   );
 }

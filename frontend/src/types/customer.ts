@@ -16,6 +16,16 @@ export type CustomerOrder = {
   serviceTypes: ServiceType[];
 };
 
+export type CustomerAccessGrant = {
+  token: string;
+  expiresAt: string;
+};
+
+export type CustomerOrderLookup = {
+  orders: CustomerOrder[];
+  accessGrant: CustomerAccessGrant;
+};
+
 export type SubmittedOrder = {
   reference: string;
   expectedDueDate: string;

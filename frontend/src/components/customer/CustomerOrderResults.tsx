@@ -1,13 +1,17 @@
-import type { CustomerOrder } from "../../types/customer";
+import type { CustomerAccessGrant, CustomerOrder } from "../../types/customer";
 import CustomerOrderCard from "./CustomerOrderCard";
 
 type CustomerOrderResultsProps = {
   error: string;
   orders: CustomerOrder[];
+  accessGrant: CustomerAccessGrant | null;
+  onOrderUpdated: (order: CustomerOrder) => void;
 };
 
 export default function CustomerOrderResults({
+  accessGrant,
   error,
+  onOrderUpdated,
   orders,
 }: CustomerOrderResultsProps) {
   return (
@@ -18,7 +22,12 @@ export default function CustomerOrderResults({
           <h2 id="results-heading">Your orders</h2>
           <div className="order-results">
             {orders.map((order) => (
-              <CustomerOrderCard key={order.id} order={order} />
+              <CustomerOrderCard
+                accessGrant={accessGrant}
+                key={order.id}
+                onOrderUpdated={onOrderUpdated}
+                order={order}
+              />
             ))}
           </div>
         </section>

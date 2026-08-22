@@ -1,8 +1,8 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { prisma } from "../infrastructure/prisma.js";
 
-const orderSelection = {
+export const customerOrderSelection = {
   id: true,
   reference: true,
   customerName: true,
@@ -27,6 +27,13 @@ const orderSelection = {
 } as const;
 
 type OrderLookupClient = Pick<PrismaClient, "order">;
+type CustomerOrderRecord = Prisma.OrderGetPayload<{
+  select: typeof customerOrderSelection;
+}>;
+
+export type CustomerOrder = Omit<CustomerOrderRecord, "serviceTypes"> & {
+  serviceTypes: CustomerOrderRecord["serviceTypes"][number]["serviceType"][];
+};
 
 export async function lookupOrders(
   value: string,
@@ -40,14 +47,19 @@ export async function lookupOrders(
         { phoneNumber: value },
       ],
     },
-    select: orderSelection,
+    select: customerOrderSelection,
     orderBy: { createdAt: "desc" },
   });
 
-  return orders.map(({ serviceTypes, ...order }) => ({
-    ...order,
-    serviceTypes: serviceTypes.map(({ serviceType }) => serviceType),
-  }));
+  return orders.map(toCustomerOrder);
 }
 
-export type CustomerOrder = Awaited<ReturnType<typeof lookupOrders>>[number];
+export function toCustomerOrder({
+  serviceTypes,
+  ...order
+}: CustomerOrderRecord): CustomerOrder {
+  return {
+    ...order,
+    serviceTypes: serviceTypes.map(({ serviceType }) => serviceType),
+  };
+}
