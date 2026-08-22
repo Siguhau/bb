@@ -100,7 +100,7 @@ describe("submitOrder", () => {
         data: expect.objectContaining({
           expectedDueDate: "2026-08-24",
           status: "NEW",
-          capacityReservation: { create: { dueDate: "2026-08-24", slot: 3 } },
+          capacityReservation: { create: { slot: 3 } },
         }),
       }),
     );

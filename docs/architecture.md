@@ -114,6 +114,17 @@ normal access logs.
 | `DELETE` | `/api/admin/orders/:id` | Permanently delete a cancelled order |
 | `GET` | `/api/admin/capacity` | View used capacity by weekday |
 
+The admin order list accepts optional `search`, `status`, `serviceType`, and
+`dueDate` query parameters. `dueDate` is an exact `YYYY-MM-DD` calendar date.
+Results are ordered by due date ascending, creation time descending, and ID
+ascending so pagination-free reads remain deterministic.
+
+The capacity endpoint requires `from` and `to` query parameters as
+`YYYY-MM-DD` calendar dates. The range is inclusive and limited to 366 calendar
+days. Its response contains every weekday in the range, including days with
+zero use, and omits Saturdays and Sundays. Each day contains numeric `used` and
+`capacity` values plus the admin-facing display value such as `"3 of 5"`.
+
 The admin update route accepts only notes, service types, expected due date, and
 status. It rejects changes to customer name, phone number, email address, and bike
 brand. Internally, updates use explicit operations such as `moveOrder`,

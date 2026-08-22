@@ -282,7 +282,7 @@ export async function submitOrder(
                   serviceType: { connect: { code: serviceTypeCode } },
                 })),
               },
-              capacityReservation: { create: { dueDate, slot } },
+              capacityReservation: { create: { slot } },
             },
             select: { id: true, expectedDueDate: true },
           });
