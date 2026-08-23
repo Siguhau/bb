@@ -6,6 +6,14 @@ import { ADMIN_SESSION_COOKIE_NAME } from "../config/admin-auth.js";
 import type { AdminLoginRateLimiter } from "../middleware/admin-login-rate-limit.js";
 import { InvalidAdministratorCredentialsError } from "../services/admin-auth.js";
 import {
+  AdminOrderCapacityUnavailableError,
+  AdminOrderDeletionNotAllowedError,
+  AdminOrderMutationValidationError,
+  AdminOrderNotFoundError,
+  deleteCancelledAdminOrder,
+  updateAdminOrder,
+} from "../services/admin-order-mutations.js";
+import {
   AdminReadValidationError,
   parseAdminOrderQuery,
   parseCapacityQuery,
@@ -221,6 +229,20 @@ function createTestApp({
 }
 
 describe("admin read routes", () => {
+  it("returns the backend-authoritative admin options", async () => {
+    const response = await request(createTestApp()).get("/api/admin/options");
+
+    expect(response.status).toBe(200);
+    expect(response.body.serviceTypes).toEqual(expect.any(Array));
+    expect(response.body.statuses).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "NEW", displayName: "New" }),
+        expect.objectContaining({ code: "CANCELLED" }),
+      ]),
+    );
+    expect(response.body.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
   it("attaches authorization before listing orders", async () => {
     const authorize = vi.fn<RequestHandler>((_request, _response, next) =>
       next(),
@@ -415,5 +437,71 @@ describe("admin read routes", () => {
     expect(response.body).toEqual({
       error: "We could not load capacity. Please try again.",
     });
+  });
+});
+
+describe("admin mutation routes", () => {
+  function mutationApp(
+    updateOrder = vi.fn().mockResolvedValue(completeOrder),
+    deleteOrder = vi.fn().mockResolvedValue(undefined),
+  ) {
+    const app = express();
+    app.use(express.json());
+    app.use(
+      "/api/admin",
+      createAdminRouter({
+        authorize: (_request, _response, next) => next(),
+        updateOrder: updateOrder as typeof updateAdminOrder,
+        deleteOrder: deleteOrder as typeof deleteCancelledAdminOrder,
+      }),
+    );
+    return { app, updateOrder, deleteOrder };
+  }
+
+  it("updates an order through the protected mutation service", async () => {
+    const { app, updateOrder } = mutationApp();
+    const patch = { status: "IN_PROGRESS", notes: "Started" };
+    const response = await request(app)
+      .patch("/api/admin/orders/order-1")
+      .send(patch);
+
+    expect(response.status).toBe(200);
+    expect(response.body.order.reference).toBe(completeOrder.reference);
+    expect(updateOrder).toHaveBeenCalledWith("order-1", patch);
+  });
+
+  it.each([
+    [new AdminOrderMutationValidationError({ status: "Invalid" }), 400],
+    [new AdminOrderNotFoundError(), 404],
+    [new AdminOrderCapacityUnavailableError("2026-08-24"), 409],
+  ])("maps update errors to safe HTTP responses", async (error, status) => {
+    const response = await request(
+      mutationApp(vi.fn().mockRejectedValue(error)).app,
+    )
+      .patch("/api/admin/orders/order-1")
+      .send({ status: "IN_PROGRESS" });
+
+    expect(response.status).toBe(status);
+    expect(response.body.error).toEqual(expect.any(String));
+  });
+
+  it("permanently deletes a cancelled order", async () => {
+    const { app, deleteOrder } = mutationApp();
+    const response = await request(app).delete("/api/admin/orders/order-1");
+
+    expect(response.status).toBe(204);
+    expect(deleteOrder).toHaveBeenCalledWith("order-1");
+  });
+
+  it.each([
+    [new AdminOrderNotFoundError(), 404],
+    [new AdminOrderDeletionNotAllowedError(), 409],
+  ])("maps delete errors to safe HTTP responses", async (error, status) => {
+    const response = await request(
+      mutationApp(undefined, vi.fn().mockRejectedValue(error)).app,
+    ).delete("/api/admin/orders/order-1");
+
+    expect(response.status).toBe(status);
+    expect(response.body.error).toEqual(expect.any(String));
   });
 });
