@@ -7,6 +7,7 @@ import {
   isServiceTypeCode,
   type ServiceTypeCode,
 } from "../domain/order.js";
+import { parseOptionalNotes } from "../domain/notes.js";
 import { prisma } from "../infrastructure/prisma.js";
 
 const REFERENCE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -144,16 +145,7 @@ export function parseOrderSubmission(value: unknown): OrderSubmission {
     serviceTypes = rawServiceTypes as ServiceTypeCode[];
   }
 
-  let notes: string | null = null;
-  if (input.notes !== undefined && input.notes !== null) {
-    if (typeof input.notes !== "string") {
-      errors.notes = "Notes must be text.";
-    } else if (input.notes.trim().length > 2_000) {
-      errors.notes = "Notes must be 2000 characters or fewer.";
-    } else {
-      notes = input.notes.trim() || null;
-    }
-  }
+  const notes = parseOptionalNotes(input.notes, errors);
 
   if (Object.keys(errors).length > 0) {
     throw new OrderSubmissionValidationError(errors);

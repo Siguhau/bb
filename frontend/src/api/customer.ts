@@ -1,5 +1,6 @@
 import type {
   CustomerOrder,
+  CustomerOrderLookup,
   ServiceType,
   SubmittedOrder,
 } from "../types/customer";
@@ -9,6 +10,7 @@ const LOOKUP_ERROR = "We could not search for orders. Please try again.";
 const ORDER_OPTIONS_ERROR =
   "We could not load the available services. Please try again.";
 const SUBMISSION_ERROR = "We could not place your order. Please try again.";
+const NOTES_UPDATE_ERROR = "We could not update your notes. Please try again.";
 
 export type CustomerOrderSubmission = {
   customerName: string;
@@ -33,8 +35,11 @@ export async function getCustomerOrderOptions(): Promise<ServiceType[]> {
 
 export async function lookupCustomerOrders(
   value: string,
-): Promise<CustomerOrder[]> {
-  const body = await requestJson<{ orders?: CustomerOrder[] }>(
+): Promise<CustomerOrderLookup> {
+  const body = await requestJson<{
+    orders?: CustomerOrder[];
+    accessGrant?: { token?: string; expiresAt?: string };
+  }>(
     "/api/customer/order-lookups",
     {
       method: "POST",
@@ -44,11 +49,43 @@ export async function lookupCustomerOrders(
     LOOKUP_ERROR,
   );
 
-  if (body.orders !== undefined && !Array.isArray(body.orders)) {
+  if (
+    !Array.isArray(body.orders) ||
+    typeof body.accessGrant?.token !== "string" ||
+    typeof body.accessGrant.expiresAt !== "string"
+  ) {
     throw new ApiError(LOOKUP_ERROR);
   }
 
-  return body.orders ?? [];
+  return {
+    orders: body.orders,
+    accessGrant: {
+      token: body.accessGrant.token,
+      expiresAt: body.accessGrant.expiresAt,
+    },
+  };
+}
+
+export async function updateCustomerOrderNotes(
+  orderId: string,
+  notes: string,
+  accessToken: string,
+): Promise<CustomerOrder> {
+  const body = await requestJson<{ order?: CustomerOrder }>(
+    `/api/customer/orders/${encodeURIComponent(orderId)}/notes`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ notes: notes.trim() || null }),
+    },
+    NOTES_UPDATE_ERROR,
+  );
+
+  if (!body.order) throw new ApiError(NOTES_UPDATE_ERROR);
+  return body.order;
 }
 
 export async function submitCustomerOrder(

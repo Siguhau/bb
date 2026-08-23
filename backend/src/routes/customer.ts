@@ -7,9 +7,16 @@ import {
 } from "../middleware/lookup-rate-limit.js";
 import { lookupOrders, type CustomerOrder } from "../services/lookup-orders.js";
 import {
+  grantAllowsOrder,
   issueCustomerAccessGrant,
   type CustomerAccessGrant,
 } from "../services/customer-access-grants.js";
+import {
+  CustomerNotesValidationError,
+  CustomerOrderNotEditableError,
+  CustomerOrderNotFoundError,
+  updateCustomerNotes,
+} from "../services/update-customer-notes.js";
 import {
   OrderSubmissionValidationError,
   submitOrder,
@@ -19,11 +26,15 @@ import {
 const LOOKUP_FAILURE_MESSAGE = "No matching orders were found.";
 const LOOKUP_BLOCKED_MESSAGE =
   "Order lookup is temporarily unavailable. Please try again later.";
+const INVALID_GRANT_MESSAGE =
+  "Your order access has expired or is not valid for this order. Look up the order again.";
 
 type CustomerRouterDependencies = {
   createOrder?: (value: unknown) => Promise<SubmittedOrder>;
   findOrders?: (value: string) => Promise<CustomerOrder[]>;
   issueAccessGrant?: (orderIds: string[]) => CustomerAccessGrant;
+  accessGrantAllowsOrder?: (token: string, orderId: string) => boolean;
+  updateNotes?: (orderId: string, value: unknown) => Promise<CustomerOrder>;
   rateLimiter?: LookupRateLimiter;
 };
 
@@ -35,6 +46,8 @@ export function createCustomerRouter({
   createOrder = submitOrder,
   findOrders = lookupOrders,
   issueAccessGrant = issueCustomerAccessGrant,
+  accessGrantAllowsOrder = grantAllowsOrder,
+  updateNotes = updateCustomerNotes,
   rateLimiter = createConfiguredLookupRateLimiter(),
 }: CustomerRouterDependencies = {}) {
   const router = Router();
@@ -94,6 +107,44 @@ export function createCustomerRouter({
       response
         .status(500)
         .json({ error: "We could not search for orders. Please try again." });
+    }
+  });
+
+  router.patch("/orders/:id/notes", async (request, response) => {
+    const orderId = request.params.id;
+    const authorization = request.get("authorization");
+    const match = authorization?.match(/^Bearer ([A-Za-z0-9_-]+)$/);
+    const token = match?.[1];
+
+    if (!orderId || !token || !accessGrantAllowsOrder(token, orderId)) {
+      response.status(403).json({ error: INVALID_GRANT_MESSAGE });
+      return;
+    }
+
+    try {
+      const order = await updateNotes(orderId, request.body);
+      response.status(200).json({ order });
+    } catch (error) {
+      if (error instanceof CustomerNotesValidationError) {
+        response
+          .status(400)
+          .json({ error: error.message, fields: error.fields });
+        return;
+      }
+      if (error instanceof CustomerOrderNotFoundError) {
+        response.status(404).json({ error: "Order not found." });
+        return;
+      }
+      if (error instanceof CustomerOrderNotEditableError) {
+        response.status(409).json({
+          error: "Notes can only be changed while the order is New.",
+        });
+        return;
+      }
+
+      response.status(500).json({
+        error: "We could not update your notes. Please try again.",
+      });
     }
   });
 
