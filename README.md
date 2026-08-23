@@ -75,7 +75,18 @@ project root:
 pnpm test
 ```
 
-This currently runs the backend Vitest suite.
+This runs the frontend and backend Vitest suites. Browser tests run separately
+with Playwright:
+
+```sh
+pnpm exec playwright install chromium
+pnpm test:e2e
+```
+
+The browser suite starts the frontend and backend automatically, recreates a
+dedicated `e2e.db` SQLite database, applies migrations, and provisions a test
+administrator. It never uses the development database. To inspect a test
+interactively, run `pnpm test:e2e:ui`.
 
 ## Production-style run
 
