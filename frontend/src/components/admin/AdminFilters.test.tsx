@@ -27,7 +27,7 @@ function TestFilters() {
 }
 
 const props = {
-  services: [{ code: "BRAKE", displayName: "Brake maintenance" }],
+  services: [{ code: "BRAKE", displayName: "Brake maintenance", cost: 300 }],
   statuses: [{ code: "IN_PROGRESS" as const, displayName: "In progress" }],
   isLoading: false,
   onChange: vi.fn(),

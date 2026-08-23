@@ -26,10 +26,11 @@ const result: AdminOrderMutationResult = {
   expectedDueDate: "2026-08-25",
   status: "IN_PROGRESS",
   notes: "Ready",
+  totalCost: 550,
   createdAt: new Date("2026-08-20T08:00:00Z"),
   updatedAt: new Date("2026-08-22T08:00:00Z"),
   serviceTypes: [
-    { code: "CHAIN_REPLACEMENT", displayName: "Chain replacement" },
+    { code: "CHAIN_REPLACEMENT", displayName: "Chain replacement", cost: 550 },
   ],
 };
 

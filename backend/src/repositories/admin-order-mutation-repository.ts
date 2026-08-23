@@ -1,6 +1,11 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 
-import type { OrderStatus, ServiceTypeCode } from "../domain/order.js";
+import {
+  calculateTotalCost,
+  getServiceType,
+  type OrderStatus,
+  type ServiceTypeCode,
+} from "../domain/order.js";
 import { prisma } from "../infrastructure/prisma.js";
 
 export type MutableOrder = {
@@ -29,7 +34,12 @@ export type AdminOrderMutationResult = {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
-  serviceTypes: Array<{ code: ServiceTypeCode; displayName: string }>;
+  serviceTypes: Array<{
+    code: ServiceTypeCode;
+    displayName: string;
+    cost: number;
+  }>;
+  totalCost: number;
 };
 
 export interface AdminOrderMutationTransaction {
@@ -135,13 +145,18 @@ export class PrismaAdminOrderMutationRepository implements AdminOrderMutationRep
               select: orderResultSelect,
             });
 
+            const serviceTypes = order.serviceTypes.map(({ serviceType }) =>
+              getServiceType(serviceType.code as ServiceTypeCode),
+            );
+            const totalCost = calculateTotalCost(
+              serviceTypes.map(({ code }) => code),
+            );
+
             return {
               ...order,
               status: order.status as OrderStatus,
-              serviceTypes: order.serviceTypes.map(({ serviceType }) => ({
-                ...serviceType,
-                code: serviceType.code as ServiceTypeCode,
-              })),
+              serviceTypes,
+              totalCost,
             };
           },
           async deleteOrder(orderId) {

@@ -53,7 +53,12 @@ export function createCustomerRouter({
   const router = Router();
 
   router.get("/order-options", (_request, response) => {
-    response.status(200).json({ serviceTypes: SERVICE_TYPES });
+    response.status(200).json({
+      serviceTypes: SERVICE_TYPES.map(({ code, displayName }) => ({
+        code,
+        displayName,
+      })),
+    });
   });
 
   router.post("/orders", async (request, response) => {

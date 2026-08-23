@@ -5,6 +5,7 @@ import {
   DAILY_CAPACITY,
   ORDER_STATUSES,
   SERVICE_TYPES,
+  calculateTotalCost,
   isCapacitySlotNumber,
   isOrderStatus,
   isServiceTypeCode,
@@ -27,6 +28,14 @@ describe("order domain definitions", () => {
       "BOUVET_DELUXE_TUNE_UP",
       "OTHER",
     ]);
+    expect(SERVICE_TYPES.map(({ code, cost }) => ({ code, cost }))).toEqual([
+      { code: "WHEEL_ADJUSTMENT", cost: 100 },
+      { code: "CHAIN_REPLACEMENT", cost: 550 },
+      { code: "BRAKE_MAINTENANCE", cost: 300 },
+      { code: "TIRE_REPLACEMENT", cost: 400 },
+      { code: "BOUVET_DELUXE_TUNE_UP", cost: 999 },
+      { code: "OTHER", cost: 0 },
+    ]);
   });
 
   it("keeps the reservation slots aligned with daily capacity", () => {
@@ -43,5 +52,11 @@ describe("order domain definitions", () => {
     expect(isOrderStatus("PENDING")).toBe(false);
     expect(isServiceTypeCode("BRAKE_MAINTENANCE")).toBe(true);
     expect(isServiceTypeCode("TUNE_UP")).toBe(false);
+  });
+
+  it("calculates the total from configured service costs", () => {
+    expect(calculateTotalCost(["WHEEL_ADJUSTMENT", "CHAIN_REPLACEMENT"])).toBe(
+      650,
+    );
   });
 });

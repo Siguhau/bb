@@ -1,5 +1,10 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 
+import {
+  calculateTotalCost,
+  getServiceType,
+  type ServiceTypeCode,
+} from "../domain/order.js";
 import { prisma } from "../infrastructure/prisma.js";
 
 export const completeOrderSelection = {
@@ -29,7 +34,12 @@ type StoredOrder = Prisma.OrderGetPayload<{
 }>;
 
 export type CompleteOrder = Omit<StoredOrder, "serviceTypes"> & {
-  serviceTypes: Array<{ code: string; displayName: string }>;
+  serviceTypes: Array<{
+    code: ServiceTypeCode;
+    displayName: string;
+    cost: number;
+  }>;
+  totalCost: number;
 };
 
 export type AdminOrderFilters = {
@@ -53,9 +63,17 @@ function toCompleteOrder({
   serviceTypes,
   ...order
 }: StoredOrder): CompleteOrder {
+  const pricedServiceTypes = serviceTypes.map(({ serviceType }) =>
+    getServiceType(serviceType.code as ServiceTypeCode),
+  );
+  const totalCost = calculateTotalCost(
+    pricedServiceTypes.map(({ code }) => code),
+  );
+
   return {
     ...order,
-    serviceTypes: serviceTypes.map(({ serviceType }) => serviceType),
+    serviceTypes: pricedServiceTypes,
+    totalCost,
   };
 }
 
