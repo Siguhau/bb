@@ -21,6 +21,18 @@ export const SERVICE_TYPES = [
     code: "BRAKE_MAINTENANCE",
     displayName: "Brake maintenance",
   },
+  {
+    code: "TIRE_REPLACEMENT",
+    displayName: "Tire replacement",
+  },
+  {
+    code: "BOUVET_DELUXE_TUNE_UP",
+    displayName: "Bouvet Deluxe Tune-up",
+  },
+  {
+    code: "OTHER",
+    displayName: "Other",
+  },
 ] as const;
 
 export type ServiceTypeCode = (typeof SERVICE_TYPES)[number]["code"];

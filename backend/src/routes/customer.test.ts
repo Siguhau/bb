@@ -112,6 +112,9 @@ describe("GET /api/customer/order-options", () => {
       { code: "WHEEL_ADJUSTMENT", displayName: "Wheel adjustment" },
       { code: "CHAIN_REPLACEMENT", displayName: "Chain replacement" },
       { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance" },
+      { code: "TIRE_REPLACEMENT", displayName: "Tire replacement" },
+      { code: "BOUVET_DELUXE_TUNE_UP", displayName: "Bouvet Deluxe Tune-up" },
+      { code: "OTHER", displayName: "Other" },
     ]);
   });
 });

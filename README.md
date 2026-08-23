@@ -31,6 +31,16 @@ pnpm db:generate
 pnpm db:migrate
 ```
 
+Create an empty, timestamped migration file with a kebab-case description:
+
+```sh
+pnpm db:migration:create add-new-service-types
+```
+
+This creates
+`backend/prisma/migrations/<timestamp>_add-new-service-types/migration.sql`
+and prints `Add new service types`.
+
 Create the initial administrator after setting `ADMIN_BOOTSTRAP_EMAIL` and
 `ADMIN_BOOTSTRAP_PASSWORD` in `backend/.env`:
 
