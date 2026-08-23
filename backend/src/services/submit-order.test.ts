@@ -53,6 +53,7 @@ describe("order submission validation", () => {
       bikeBrand: "Trek",
       serviceTypes: ["BRAKE_MAINTENANCE"],
       notes: "Rear brake rubs",
+      discountCode: null,
     });
   });
 
@@ -65,11 +66,34 @@ describe("order submission validation", () => {
     ["serviceTypes", ["NOT_SUPPORTED"]],
     ["serviceTypes", ["BRAKE_MAINTENANCE", "BRAKE_MAINTENANCE"]],
     ["notes", "n".repeat(2_001)],
+    ["discountCode", "not-a-code"],
+    ["discountCode", 50],
+    ["discountCode", "B".repeat(65)],
     ["status", "COMPLETED"],
   ])("rejects invalid or server-owned %s input", (field, invalidValue) => {
     expect(() =>
       parseOrderSubmission({ ...validInput, [field]: invalidValue }),
     ).toThrow(OrderSubmissionValidationError);
+  });
+
+  it("normalizes the configured optional discount code", () => {
+    expect(
+      parseOrderSubmission({ ...validInput, discountCode: " bb50 " }),
+    ).toMatchObject({ discountCode: "BB50" });
+    expect(
+      parseOrderSubmission({ ...validInput, discountCode: "   " }),
+    ).toMatchObject({ discountCode: null });
+  });
+
+  it("rejects an invalid non-empty discount code before attempting persistence", async () => {
+    const { client } = submissionClient();
+
+    await expect(
+      submitOrder({ ...validInput, discountCode: "BB51" }, { client }),
+    ).rejects.toMatchObject({
+      fields: { discountCode: "Enter a valid discount code." },
+    });
+    expect(client.$transaction).not.toHaveBeenCalled();
   });
 });
 
@@ -100,6 +124,7 @@ describe("submitOrder", () => {
         data: expect.objectContaining({
           expectedDueDate: "2026-08-24",
           status: "NEW",
+          discountCode: null,
           capacityReservation: { create: { slot: 3 } },
         }),
       }),

@@ -13,6 +13,7 @@ const storedOrder = {
   expectedDueDate: "2026-08-24",
   status: "NEW",
   notes: null,
+  discountCode: "BB50",
   createdAt: new Date("2026-08-22T08:00:00Z"),
   updatedAt: new Date("2026-08-22T09:00:00Z"),
   serviceTypes: [
@@ -58,7 +59,9 @@ describe("Prisma admin order repository", () => {
     ).resolves.toEqual([
       {
         ...storedOrder,
-        totalCost: 300,
+        subtotalCost: 300,
+        discountAmount: 150,
+        totalCost: 150,
         serviceTypes: [
           {
             code: "BRAKE_MAINTENANCE",
@@ -112,7 +115,12 @@ describe("Prisma admin order repository", () => {
         cost: 300,
       },
     ]);
-    expect(order).toMatchObject({ totalCost: 300 });
+    expect(order).toMatchObject({
+      discountCode: "BB50",
+      subtotalCost: 300,
+      discountAmount: 150,
+      totalCost: 150,
+    });
   });
 
   it("counts authoritative reservations in the inclusive capacity range", async () => {
