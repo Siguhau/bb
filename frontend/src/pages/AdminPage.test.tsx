@@ -31,6 +31,9 @@ const order = {
   expectedDueDate: "2026-08-24",
   status: "NEW" as const,
   notes: "Brake rubs",
+  discountCode: null,
+  subtotalCost: 300,
+  discountAmount: 0,
   totalCost: 300,
   createdAt: "2026-08-22T08:00:00.000Z",
   updatedAt: "2026-08-22T09:00:00.000Z",
@@ -163,6 +166,28 @@ describe("AdminPage", () => {
     await user.click(await screen.findByRole("button", { name: /A1B2C3D4/ }));
     expect(screen.getByText("Total cost")).toBeInTheDocument();
     expect(screen.getAllByText(/300/).length).toBeGreaterThan(0);
+  });
+
+  it("shows an applied discount and discounted total to the administrator", async () => {
+    vi.mocked(getAdminOrders).mockResolvedValue([
+      {
+        ...order,
+        discountCode: "BB50",
+        subtotalCost: 300,
+        discountAmount: 150,
+        totalCost: 150,
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<AdminPage />);
+
+    await user.click(await screen.findByRole("button", { name: /A1B2C3D4/ }));
+
+    expect(screen.getByText("Subtotal")).toBeInTheDocument();
+    expect(screen.getByText("Discount code")).toBeInTheDocument();
+    expect(screen.getByText("BB50")).toBeInTheDocument();
+    expect(screen.getByText("Discount")).toBeInTheDocument();
+    expect(screen.getAllByText(/150/).length).toBeGreaterThanOrEqual(2);
   });
 
   it("opens the selected order in a modal and closes it", async () => {

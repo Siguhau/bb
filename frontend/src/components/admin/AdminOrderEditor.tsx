@@ -51,10 +51,32 @@ function OrderDetails({ order }: Pick<Props, "order">) {
         <dt>Last updated</dt>
         <dd>{new Date(order.updatedAt).toLocaleString()}</dd>
       </div>
-      <div>
-        <dt>Total cost</dt>
-        <dd>{formatCost(order.totalCost)}</dd>
-      </div>
+      {order.discountCode && (
+        <>
+          <div>
+            <dt>Subtotal</dt>
+            <dd>{formatCost(order.subtotalCost)}</dd>
+          </div>
+          <div>
+            <dt>Discount code</dt>
+            <dd>{order.discountCode}</dd>
+          </div>
+          <div>
+            <dt>Discount</dt>
+            <dd>−{formatCost(order.discountAmount)}</dd>
+          </div>
+          <div>
+            <dt>Total cost</dt>
+            <dd>{formatCost(order.totalCost)}</dd>
+          </div>
+        </>
+      )}
+      {!order.discountCode && (
+        <div>
+          <dt>Total cost</dt>
+          <dd>{formatCost(order.totalCost)}</dd>
+        </div>
+      )}
     </dl>
   );
 }

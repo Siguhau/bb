@@ -9,6 +9,9 @@ export type Administrator = { id: string; email: string };
 export type AdminOrder = Order & {
   createdAt: string;
   updatedAt: string;
+  discountCode: string | null;
+  subtotalCost: number;
+  discountAmount: number;
   totalCost: number;
 };
 

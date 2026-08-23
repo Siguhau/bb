@@ -11,6 +11,8 @@ const ORDER_OPTIONS_ERROR =
   "We could not load the available services. Please try again.";
 const SUBMISSION_ERROR = "We could not place your order. Please try again.";
 const NOTES_UPDATE_ERROR = "We could not update your notes. Please try again.";
+const DISCOUNT_VERIFICATION_ERROR =
+  "We could not verify that discount code. Please try again.";
 
 export type CustomerOrderSubmission = {
   customerName: string;
@@ -19,7 +21,12 @@ export type CustomerOrderSubmission = {
   bikeBrand: string;
   serviceTypes: string[];
   notes: string;
+  discountCode: string;
 };
+
+export type DiscountCodeVerification =
+  | { valid: true; discountCode: string; discountPercentage: number }
+  | { valid: false };
 
 export async function getCustomerOrderOptions(): Promise<ServiceType[]> {
   const body = await requestJson<{ serviceTypes?: ServiceType[] }>(
@@ -88,6 +95,39 @@ export async function updateCustomerOrderNotes(
   return body.order;
 }
 
+export async function verifyDiscountCode(
+  discountCode: string,
+): Promise<DiscountCodeVerification> {
+  const body = await requestJson<{
+    valid?: unknown;
+    discountCode?: unknown;
+    discountPercentage?: unknown;
+  }>(
+    "/api/customer/discount-codes/verify",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ discountCode: discountCode.trim() }),
+    },
+    DISCOUNT_VERIFICATION_ERROR,
+  );
+
+  if (body.valid === false) return { valid: false };
+  if (
+    body.valid === true &&
+    typeof body.discountCode === "string" &&
+    typeof body.discountPercentage === "number"
+  ) {
+    return {
+      valid: true,
+      discountCode: body.discountCode,
+      discountPercentage: body.discountPercentage,
+    };
+  }
+
+  throw new ApiError(DISCOUNT_VERIFICATION_ERROR);
+}
+
 export async function submitCustomerOrder(
   input: CustomerOrderSubmission,
 ): Promise<SubmittedOrder> {
@@ -107,6 +147,7 @@ export async function submitCustomerOrder(
         bikeBrand: input.bikeBrand.trim(),
         serviceTypes: input.serviceTypes,
         notes: input.notes.trim() || undefined,
+        discountCode: input.discountCode.trim() || undefined,
       }),
     },
     SUBMISSION_ERROR,

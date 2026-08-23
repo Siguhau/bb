@@ -96,6 +96,7 @@ The initial API is divided into customer and admin routes.
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/customer/orders` | Submit an order |
+| `POST` | `/api/customer/discount-codes/verify` | Verify an optional discount code |
 | `POST` | `/api/customer/order-lookups` | Look up orders by one exact value |
 | `PATCH` | `/api/customer/orders/:id/notes` | Update notes on a `New` order after lookup |
 
@@ -147,6 +148,12 @@ backend/src/
 
 Route handlers delegate to use cases such as `submitOrder`, `lookupOrders`,
 `updateCustomerNotes`, `moveOrder`, `cancelOrder`, and `reopenOrder`.
+
+Discount-code verification is a customer-interface convenience. Order creation
+always validates the submitted code again on the backend and stores only the
+canonical applied code. Admin order reads calculate the subtotal, discount, and
+final whole-NOK total from the selected services and stored code. The `BB50`
+discount rounds fractional NOK totals up to the next whole NOK.
 
 ## Persistence and concurrency
 

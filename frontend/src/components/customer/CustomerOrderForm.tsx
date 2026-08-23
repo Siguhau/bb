@@ -5,6 +5,7 @@ import Alert from "../Alert";
 import {
   getCustomerOrderOptions,
   submitCustomerOrder,
+  verifyDiscountCode,
   type CustomerOrderSubmission,
 } from "../../api/customer";
 import type { ServiceType, SubmittedOrder } from "../../types/customer";
@@ -20,6 +21,7 @@ const initialValues: CustomerOrderSubmission = {
   bikeBrand: "",
   serviceTypes: [],
   notes: "",
+  discountCode: "",
 };
 
 export default function CustomerOrderForm({
@@ -31,6 +33,10 @@ export default function CustomerOrderForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([]);
   const [serviceOptionsError, setServiceOptionsError] = useState("");
+  const [verifiedDiscountCode, setVerifiedDiscountCode] = useState("");
+  const [discountPercentage, setDiscountPercentage] = useState<number>();
+  const [discountCodeMessage, setDiscountCodeMessage] = useState("");
+  const [isVerifyingDiscountCode, setIsVerifyingDiscountCode] = useState(false);
 
   useEffect(() => {
     let isCurrent = true;
@@ -69,14 +75,76 @@ export default function CustomerOrderForm({
     setFieldErrors((current) => ({ ...current, serviceTypes: "" }));
   }
 
+  function updateDiscountCode(discountCode: string) {
+    setValues((current) => ({ ...current, discountCode }));
+    setVerifiedDiscountCode("");
+    setDiscountPercentage(undefined);
+    setDiscountCodeMessage("");
+    setFieldErrors((current) => ({ ...current, discountCode: "" }));
+  }
+
+  async function handleDiscountCodeVerification() {
+    const discountCode = values.discountCode.trim();
+    if (!discountCode) return;
+
+    setIsVerifyingDiscountCode(true);
+    setDiscountCodeMessage("");
+    setFieldErrors((current) => ({ ...current, discountCode: "" }));
+
+    try {
+      const result = await verifyDiscountCode(discountCode);
+      if (!result.valid) {
+        setVerifiedDiscountCode("");
+        setDiscountPercentage(undefined);
+        setFieldErrors((current) => ({
+          ...current,
+          discountCode: "This discount code is not valid.",
+        }));
+        return;
+      }
+
+      setValues((current) => ({
+        ...current,
+        discountCode: result.discountCode,
+      }));
+      setVerifiedDiscountCode(result.discountCode);
+      setDiscountPercentage(result.discountPercentage);
+      setFieldErrors((current) => ({ ...current, discountCode: "" }));
+      setDiscountCodeMessage(
+        `${result.discountCode} applied: ${result.discountPercentage}% off.`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "We could not verify that discount code. Please try again.";
+      setDiscountCodeMessage(message);
+    } finally {
+      setIsVerifyingDiscountCode(false);
+    }
+  }
+
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError("");
+
+    if (isVerifyingDiscountCode) return;
 
     if (values.serviceTypes.length === 0) {
       setFieldErrors((current) => ({
         ...current,
         serviceTypes: "Select at least one service.",
+      }));
+      return;
+    }
+
+    if (
+      values.discountCode.trim() &&
+      values.discountCode !== verifiedDiscountCode
+    ) {
+      setFieldErrors((current) => ({
+        ...current,
+        discountCode: "Verify this discount code before placing your order.",
       }));
       return;
     }
@@ -234,6 +302,52 @@ export default function CustomerOrderForm({
         </fieldset>
 
         <div className="form-field">
+          <label htmlFor="discount-code">
+            Discount code <span className="optional-label">Optional</span>
+          </label>
+          <div className="discount-code-controls">
+            <input
+              aria-describedby={
+                fieldErrors.discountCode || discountCodeMessage
+                  ? "discount-code-message"
+                  : undefined
+              }
+              aria-invalid={Boolean(fieldErrors.discountCode)}
+              autoCapitalize="characters"
+              disabled={isVerifyingDiscountCode || isSubmitting}
+              id="discount-code"
+              maxLength={64}
+              onChange={(event) => updateDiscountCode(event.target.value)}
+              type="text"
+              value={values.discountCode}
+            />
+            <button
+              className="button button-secondary"
+              disabled={isVerifyingDiscountCode || !values.discountCode.trim()}
+              onClick={handleDiscountCodeVerification}
+              type="button"
+            >
+              {isVerifyingDiscountCode ? "Verifying…" : "Verify code"}
+            </button>
+          </div>
+          {(fieldErrors.discountCode || discountCodeMessage) && (
+            <p
+              className={verifiedDiscountCode ? "field-success" : "field-error"}
+              id="discount-code-message"
+              aria-live="polite"
+              role="status"
+            >
+              {fieldErrors.discountCode || discountCodeMessage}
+            </p>
+          )}
+          {verifiedDiscountCode && discountPercentage !== undefined && (
+            <p className="field-help">
+              Your verified discount will be applied when the order is placed.
+            </p>
+          )}
+        </div>
+
+        <div className="form-field">
           <label htmlFor="notes">
             Notes <span className="optional-label">Optional</span>
           </label>
@@ -256,7 +370,11 @@ export default function CustomerOrderForm({
         <div className="form-actions">
           <button
             className="button button-primary"
-            disabled={isSubmitting || serviceTypes.length === 0}
+            disabled={
+              isSubmitting ||
+              isVerifyingDiscountCode ||
+              serviceTypes.length === 0
+            }
             type="submit"
           >
             {isSubmitting ? "Placing order…" : "Place order"}

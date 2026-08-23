@@ -303,10 +303,26 @@ h3 {
   color: #7b211a;
   font-size: 0.875rem;
 }
+.field-success {
+  margin: 0;
+  color: #176539;
+  font-size: 0.875rem;
+}
 .field-help {
   margin: 0.5rem 0 0;
   color: var(--color-muted);
   font-size: 0.875rem;
+}
+.discount-code-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+.discount-code-controls input {
+  flex: 1;
+}
+.discount-code-controls .button {
+  flex: 0 0 auto;
 }
 .form-actions {
   display: flex;
@@ -685,6 +701,12 @@ h3 {
   .form-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+  .discount-code-controls {
+    flex-direction: column;
+  }
+  .discount-code-controls .button {
+    width: 100%;
   }
   .form-actions .text-link {
     text-align: center;

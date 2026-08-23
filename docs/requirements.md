@@ -32,7 +32,11 @@ Each order contains:
   - Wheel adjustment.
   - Chain replacement.
   - Brake maintenance.
-- A total cost in NOK, calculated as the sum of the selected service types' fixed costs.
+- A service subtotal in NOK, calculated as the sum of the selected service
+  types' fixed costs, and a final total after any applied discount.
+- An optional applied discount code. The only supported code is `BB50`, which
+  discounts the service subtotal by 50%. Fractional NOK results are rounded up
+  to the next whole NOK.
 - Expected due date, assigned by the system and adjustable by an administrator.
 - Notes, which are optional.
 - Current status.
@@ -47,6 +51,7 @@ Customer name, phone number, email address, bike brand, and at least one service
 A customer can:
 
 - Submit a maintenance order.
+- Enter an optional discount code and verify it before submitting the order.
 - Receive the order reference after a successful submission.
 - Look up orders using exactly one of the following:
   - Reference.
@@ -68,6 +73,8 @@ An authenticated administrator can:
 - View all orders.
 - View an individual order.
 - View each order's service costs and total cost in NOK.
+- View an order's applied discount code, subtotal, discount amount, and
+  discounted total.
 - Search orders by reference, customer name, email address, phone number, or bike brand.
 - Filter orders by status, service type, or due date.
 - Change an order's notes and service types.
@@ -168,6 +175,8 @@ Automated tests must cover at least:
 - Capacity release on cancellation without automatic rescheduling.
 - Service-cost calculation and restriction of pricing information to authenticated administrators.
 - Server-side validation and persistence failures.
+- Successful and unsuccessful discount-code verification, enforcement during
+  order submission, and rounded-up discount calculation.
 
 ## Acceptance criteria
 
@@ -181,7 +190,13 @@ Automated tests must cover at least:
 - Only a cancelled order can be permanently deleted, and deletion requires confirmation.
 - A permanently deleted order is no longer retrievable from the live system by customers or administrators.
 - A failed database operation is reported as a failure and does not create or partially update an order.
-- An order's total cost equals the sum of its selected service costs and is not exposed through customer interfaces or customer API responses.
+- An order without a discount has a total cost equal to the sum of its selected
+  service costs. Pricing is not exposed through customer interfaces or customer
+  API responses.
+- An order with `BB50` has a total cost equal to 50% of its service subtotal,
+  rounded up to the next whole NOK. Invalid non-empty discount codes cannot be
+  used to create an order, and the applied code and price breakdown are visible
+  only to authenticated administrators.
 
 ## Priorities - Tasks
 
