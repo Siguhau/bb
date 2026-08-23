@@ -31,7 +31,7 @@ jobs:
         run: pnpm typecheck
       - name: Test
         run: |
-          pnpm --filter bouvet-bike-backend test -- --no-file-parallelism
+          pnpm --filter bouvet-bike-backend test --no-file-parallelism
           pnpm --filter bouvet-bike-frontend test
       - name: Build
         run: pnpm build
