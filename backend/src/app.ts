@@ -8,6 +8,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { requireAdministrator } from "./middleware/admin-auth.js";
 import { createAdminRouter } from "./routes/admin.js";
 import customerRouter from "./routes/customer.js";
 
@@ -21,14 +22,8 @@ type AppDependencies = {
   authorizeAdmin?: RequestHandler;
 };
 
-const adminAuthenticationUnavailable: RequestHandler = (_request, response) => {
-  response
-    .status(503)
-    .json({ error: "Admin authentication is not configured." });
-};
-
 export function createApp({
-  authorizeAdmin = adminAuthenticationUnavailable,
+  authorizeAdmin = requireAdministrator,
 }: AppDependencies = {}): Express {
   const app = express();
 

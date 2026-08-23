@@ -7,6 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Administrator {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions AdminSession[]
+}
+
+model AdminSession {
+  id              String   @id @default(cuid())
+  tokenHash       String   @unique
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  administratorId String
+
+  administrator Administrator @relation(fields: [administratorId], references: [id], onDelete: Cascade)
+
+  @@index([administratorId])
+  @@index([expiresAt])
+}
+
 // Dates that represent a shop day are stored as ISO calendar-date strings
 // (YYYY-MM-DD). Timestamps remain UTC DateTime values.
 model Order {

@@ -13,12 +13,12 @@ describe("GET /api/health", () => {
 });
 
 describe("admin access", () => {
-  it("fails closed when admin authentication has not been configured", async () => {
+  it("requires administrator authentication for admin data routes", async () => {
     const response = await request(createApp()).get("/api/admin/orders");
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(401);
     expect(response.body).toEqual({
-      error: "Admin authentication is not configured.",
+      error: "Administrator authentication is required.",
     });
   });
 });
