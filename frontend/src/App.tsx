@@ -3,6 +3,7 @@ import AdminPage from "./pages/AdminPage";
 import CustomerOrderPage from "./pages/CustomerOrderPage";
 import CustomerPage from "./pages/CustomerPage";
 import { themeStyle } from "./theme";
+import { Wrench } from "lucide-react";
 
 export default function App() {
   return (
@@ -14,7 +15,7 @@ export default function App() {
           </Link>
           <nav aria-label="Primary navigation">
             <NavLink className="route-link" to="/admin">
-              Administrator access
+              Admin Login <Wrench size={16} />
             </NavLink>
           </nav>
         </header>
