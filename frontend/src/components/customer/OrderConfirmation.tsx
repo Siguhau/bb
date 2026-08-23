@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { SubmittedOrder } from "../../types/customer";
 import { formatDueDate } from "../../utils/formatDueDate";
+import CopyButton from "../CopyButton";
 
 type OrderConfirmationProps = {
   order: SubmittedOrder;
@@ -15,7 +16,16 @@ export default function OrderConfirmation({ order }: OrderConfirmationProps) {
         Keep your reference safe. You can use it to find this order at any time.
       </p>
       <div className="confirmation-reference">
-        <span>Order reference</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>Order reference</span>
+          <CopyButton text={order.reference} />
+        </div>
         <strong>{order.reference}</strong>
       </div>
       <dl className="confirmation-details">
