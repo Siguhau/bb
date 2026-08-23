@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import Alert from "../Alert";
 
 type Props = {
   error: string;
@@ -45,11 +46,7 @@ export default function AdminSignIn({ error, isSubmitting, onSubmit }: Props) {
             onChange={(event) => setPassword(event.target.value)}
           />
         </div>
-        {error && (
-          <p className="error-message" role="alert">
-            {error}
-          </p>
-        )}
+        {error && <Alert>{error}</Alert>}
         <button
           className="button button-primary"
           disabled={isSubmitting}

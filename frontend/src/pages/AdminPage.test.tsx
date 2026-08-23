@@ -118,7 +118,7 @@ describe("AdminPage", () => {
     await waitFor(() =>
       expect(getAdminCapacity).toHaveBeenLastCalledWith(
         "2026-08-23",
-        "2026-09-06",
+        "2026-09-05",
       ),
     );
   });
@@ -133,6 +133,7 @@ describe("AdminPage", () => {
     const user = userEvent.setup();
     render(<AdminPage />);
 
+    await user.click(await screen.findByRole("button", { name: /A1B2C3D4/ }));
     expect(
       await screen.findByRole("heading", { name: "Ada Lovelace" }),
     ).toBeInTheDocument();
@@ -151,5 +152,43 @@ describe("AdminPage", () => {
         notes: "Work started",
       }),
     );
+  });
+
+  it("opens the selected order in a modal and closes it", async () => {
+    vi.mocked(getAdminOrders).mockResolvedValue([order]);
+    const user = userEvent.setup();
+    render(<AdminPage />);
+
+    const orderButton = await screen.findByRole("button", { name: /A1B2C3D4/ });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(orderButton);
+
+    expect(
+      screen.getByRole("dialog", { name: "Ada Lovelace" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Close order editor" }),
+    ).toHaveFocus();
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Close order editor" }),
+    ).toHaveFocus();
+    await user.click(
+      screen.getByRole("button", { name: "Close order editor" }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes the order editor with Escape", async () => {
+    vi.mocked(getAdminOrders).mockResolvedValue([order]);
+    const user = userEvent.setup();
+    render(<AdminPage />);
+
+    await user.click(await screen.findByRole("button", { name: /A1B2C3D4/ }));
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

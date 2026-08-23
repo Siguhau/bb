@@ -7,7 +7,7 @@ import type {
   AdminStatusOption,
   CapacityDay,
 } from "../types/admin";
-import type { ServiceType } from "../types/customer";
+import type { ServiceType } from "../types/order";
 
 const ADMIN_ERROR = "We could not complete the administrator request.";
 

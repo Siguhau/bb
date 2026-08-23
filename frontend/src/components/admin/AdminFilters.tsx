@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import type { ServiceType } from "../../types/customer";
+import type { ServiceType } from "../../types/order";
 import type { AdminOrderFilters, AdminStatusOption } from "../../types/admin";
 
 type Props = {
@@ -8,7 +8,7 @@ type Props = {
   statuses: AdminStatusOption[];
   isLoading: boolean;
   onChange: (filters: AdminOrderFilters) => void;
-  onSubmit: () => void;
+  onSubmit: (filters: AdminOrderFilters) => void;
   onClear: () => void;
 };
 
@@ -23,14 +23,17 @@ export default function AdminFilters({
 }: Props) {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSubmit();
+    onSubmit(filters);
   }
-  function set(field: keyof AdminOrderFilters, value: string) {
-    onChange({ ...filters, [field]: value });
+
+  function set(field: keyof AdminOrderFilters, value: string, apply = false) {
+    const nextFilters = { ...filters, [field]: value };
+    onChange(nextFilters);
+    if (apply) onSubmit(nextFilters);
   }
 
   return (
-    <form className="admin-filters" onSubmit={submit}>
+    <form className="admin-filters" aria-busy={isLoading} onSubmit={submit}>
       <div className="form-field admin-search-field">
         <label htmlFor="admin-search">Search orders</label>
         <input
@@ -38,58 +41,53 @@ export default function AdminFilters({
           placeholder="Reference, customer, contact, or bike"
           value={filters.search}
           onChange={(event) => set("search", event.target.value)}
+          onBlur={(event) => set("search", event.target.value, true)}
         />
       </div>
-      <div className="form-field">
-        <label htmlFor="admin-status-filter">Status</label>
-        <select
-          id="admin-status-filter"
-          value={filters.status}
-          onChange={(event) => set("status", event.target.value)}
-        >
-          <option value="">All statuses</option>
-          {statuses.map((status) => (
-            <option key={status.code} value={status.code}>
-              {status.displayName}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="form-field">
-        <label htmlFor="admin-service-filter">Service</label>
-        <select
-          id="admin-service-filter"
-          value={filters.serviceType}
-          onChange={(event) => set("serviceType", event.target.value)}
-        >
-          <option value="">All services</option>
-          {services.map((service) => (
-            <option key={service.code} value={service.code}>
-              {service.displayName}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="form-field">
-        <label htmlFor="admin-date-filter">Due date</label>
-        <input
-          id="admin-date-filter"
-          type="date"
-          value={filters.dueDate}
-          onChange={(event) => set("dueDate", event.target.value)}
-        />
+      <div className="admin-filter-fields">
+        <div className="form-field">
+          <label htmlFor="admin-status-filter">Status</label>
+          <select
+            id="admin-status-filter"
+            value={filters.status}
+            onChange={(event) => set("status", event.target.value, true)}
+          >
+            <option value="">All statuses</option>
+            {statuses.map((status) => (
+              <option key={status.code} value={status.code}>
+                {status.displayName.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field">
+          <label htmlFor="admin-service-filter">Service</label>
+          <select
+            id="admin-service-filter"
+            value={filters.serviceType}
+            onChange={(event) => set("serviceType", event.target.value, true)}
+          >
+            <option value="">All services</option>
+            {services.map((service) => (
+              <option key={service.code} value={service.code}>
+                {service.displayName}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field">
+          <label htmlFor="admin-date-filter">Due date</label>
+          <input
+            id="admin-date-filter"
+            type="date"
+            value={filters.dueDate}
+            onChange={(event) => set("dueDate", event.target.value, true)}
+          />
+        </div>
       </div>
       <div className="admin-filter-actions">
         <button
-          className="button button-primary"
-          disabled={isLoading}
-          type="submit"
-        >
-          Apply filters
-        </button>
-        <button
           className="button button-secondary"
-          disabled={isLoading}
           type="button"
           onClick={onClear}
         >

@@ -1,30 +1,14 @@
-import type { ServiceType } from "./customer";
+import type { Order, OrderStatus } from "./order";
 
-export type AdminOrderStatus =
-  | "NEW"
-  | "IN_PROGRESS"
-  | "WAITING_FOR_CUSTOMER_PICKUP"
-  | "COMPLETED"
-  | "CANCELLED";
 export type AdminStatusOption = {
-  code: AdminOrderStatus;
+  code: OrderStatus;
   displayName: string;
 };
 export type Administrator = { id: string; email: string };
 
-export type AdminOrder = {
-  id: string;
-  reference: string;
-  customerName: string;
-  phoneNumber: string;
-  emailAddress: string;
-  bikeBrand: string;
-  expectedDueDate: string;
-  status: AdminOrderStatus;
-  notes: string | null;
+export type AdminOrder = Order & {
   createdAt: string;
   updatedAt: string;
-  serviceTypes: ServiceType[];
 };
 
 export type AdminOrderFilters = {
@@ -38,7 +22,7 @@ export type AdminOrderPatch = Partial<{
   notes: string | null;
   serviceTypes: string[];
   expectedDueDate: string;
-  status: AdminOrderStatus;
+  status: OrderStatus;
 }>;
 
 export type CapacityDay = {
