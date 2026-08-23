@@ -1,4 +1,5 @@
 import type { AdminOrder, AdminStatusOption } from "../../types/admin";
+import { formatCost } from "../../utils/formatCost";
 import { formatDueDate } from "../../utils/formatDueDate";
 
 type Props = {
@@ -50,7 +51,10 @@ function OrderSection({
               </small>
             </span>
             <span>
-              <small>Due {formatDueDate(order.expectedDueDate)}</small>
+              <small>
+                {formatCost(order.totalCost)} · Due{" "}
+                {formatDueDate(order.expectedDueDate)}
+              </small>
               <span className="status-badge">
                 {statusLabel(order.status, statuses)}
               </span>

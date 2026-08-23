@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ADMIN_SESSION_COOKIE_NAME } from "../config/admin-auth.js";
 import type { AdminLoginRateLimiter } from "../middleware/admin-login-rate-limit.js";
+import type { CompleteOrder } from "../repositories/admin-order-repository.js";
 import { InvalidAdministratorCredentialsError } from "../services/admin-auth.js";
 import {
   AdminOrderCapacityUnavailableError,
@@ -187,7 +188,7 @@ describe("DELETE /api/admin/session", () => {
   });
 });
 
-const completeOrder = {
+const completeOrder: CompleteOrder = {
   id: "order-1",
   reference: "A1B2C3D4",
   customerName: "Ada Lovelace",
@@ -197,10 +198,11 @@ const completeOrder = {
   expectedDueDate: "2026-08-24",
   status: "NEW",
   notes: "Rear brake rubs",
+  totalCost: 300,
   createdAt: new Date("2026-08-22T08:00:00Z"),
   updatedAt: new Date("2026-08-22T09:00:00Z"),
   serviceTypes: [
-    { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance" },
+    { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance", cost: 300 },
   ],
 };
 

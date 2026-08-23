@@ -292,7 +292,10 @@ export async function submitOrder(
           const serviceType = SERVICE_TYPES.find(
             (candidate) => candidate.code === code,
           )!;
-          return { ...serviceType };
+          return {
+            code: serviceType.code,
+            displayName: serviceType.displayName,
+          };
         }),
       };
     } catch (error) {

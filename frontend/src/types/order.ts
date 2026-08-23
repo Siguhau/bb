@@ -8,6 +8,7 @@ export type OrderStatus =
 export type ServiceType = {
   code: string;
   displayName: string;
+  cost: number;
 };
 
 export type Order = {

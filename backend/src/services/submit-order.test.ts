@@ -90,10 +90,10 @@ describe("submitOrder", () => {
       reference: "A1B2C3D4",
       expectedDueDate: "2026-08-24",
       status: "NEW",
-      serviceTypes: [
-        { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance" },
-      ],
     });
+    expect(order.serviceTypes).toEqual([
+      { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance" },
+    ]);
     expect(create).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({

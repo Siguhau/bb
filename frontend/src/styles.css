@@ -283,6 +283,11 @@ h3 {
   border-radius: var(--radius-sm);
   background: var(--color-canvas);
 }
+.service-option-cost {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
 .service-option:has(input:checked) {
   border-color: var(--color-brand);
   background: var(--color-brand-soft);

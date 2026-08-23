@@ -58,8 +58,13 @@ describe("Prisma admin order repository", () => {
     ).resolves.toEqual([
       {
         ...storedOrder,
+        totalCost: 300,
         serviceTypes: [
-          { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance" },
+          {
+            code: "BRAKE_MAINTENANCE",
+            displayName: "Brake maintenance",
+            cost: 300,
+          },
         ],
       },
     ]);
@@ -101,8 +106,13 @@ describe("Prisma admin order repository", () => {
       expect.objectContaining({ where: { id: "order-1" } }),
     );
     expect(order?.serviceTypes).toEqual([
-      { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance" },
+      {
+        code: "BRAKE_MAINTENANCE",
+        displayName: "Brake maintenance",
+        cost: 300,
+      },
     ]);
+    expect(order).toMatchObject({ totalCost: 300 });
   });
 
   it("counts authoritative reservations in the inclusive capacity range", async () => {

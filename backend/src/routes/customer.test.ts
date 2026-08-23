@@ -201,6 +201,8 @@ describe("POST /api/customer/order-lookups", () => {
         { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance" },
       ],
     });
+    expect(response.body.orders[0]).not.toHaveProperty("totalCost");
+    expect(response.body.orders[0].serviceTypes[0]).not.toHaveProperty("cost");
   });
 
   it("continues to return completed and cancelled orders with a scoped grant", async () => {
@@ -348,6 +350,8 @@ describe("PATCH /api/customer/orders/:id/notes", () => {
     expect(response.body).toEqual({
       order: JSON.parse(JSON.stringify(updatedOrder)),
     });
+    expect(response.body.order).not.toHaveProperty("totalCost");
+    expect(response.body.order.serviceTypes[0]).not.toHaveProperty("cost");
   });
 
   it.each([

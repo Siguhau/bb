@@ -31,10 +31,11 @@ const order = {
   expectedDueDate: "2026-08-24",
   status: "NEW" as const,
   notes: "Brake rubs",
+  totalCost: 300,
   createdAt: "2026-08-22T08:00:00.000Z",
   updatedAt: "2026-08-22T09:00:00.000Z",
   serviceTypes: [
-    { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance" },
+    { code: "BRAKE_MAINTENANCE", displayName: "Brake maintenance", cost: 300 },
   ],
 };
 
@@ -152,6 +153,16 @@ describe("AdminPage", () => {
         notes: "Work started",
       }),
     );
+  });
+
+  it("shows the total cost to the administrator", async () => {
+    vi.mocked(getAdminOrders).mockResolvedValue([order]);
+    const user = userEvent.setup();
+    render(<AdminPage />);
+
+    await user.click(await screen.findByRole("button", { name: /A1B2C3D4/ }));
+    expect(screen.getByText("Total cost")).toBeInTheDocument();
+    expect(screen.getAllByText(/300/).length).toBeGreaterThan(0);
   });
 
   it("opens the selected order in a modal and closes it", async () => {

@@ -16,7 +16,7 @@ Bouvet Bike is a web-based portal for a bicycle repair shop to receive, track, a
 - Administrators use individual accounts with an email address and password and must sign in before accessing admin functionality.
 - Customers may look up orders using a reference, email address, or phone number as a single lookup value. Allowing email or phone lookup without additional verification is an accepted MVP privacy tradeoff.
 - A successful lookup also permits the customer to update notes on any matching order whose status is `New`. This write access is part of the accepted MVP privacy tradeoff.
-- Prices, payments, inventory, appointment booking, notifications, photo uploads, technician assignment, and automatic rescheduling are outside the MVP.
+- Payments, inventory, appointment booking, notifications, photo uploads, technician assignment, and automatic rescheduling are outside the MVP.
 - Current major desktop and mobile browsers are supported.
 
 ## Order data
@@ -32,6 +32,7 @@ Each order contains:
   - Wheel adjustment.
   - Chain replacement.
   - Brake maintenance.
+- A total cost in NOK, calculated as the sum of the selected service types' fixed costs.
 - Expected due date, assigned by the system and adjustable by an administrator.
 - Notes, which are optional.
 - Current status.
@@ -58,12 +59,15 @@ A customer can:
 
 Customers cannot change contact information, bike brand, service types, due date, or status after submission.
 
+Service costs are fixed whole-NOK amounts. Their sum is the order's total cost. Pricing information is visible only to authenticated administrators.
+
 ### Admin interface
 
 An authenticated administrator can:
 
 - View all orders.
 - View an individual order.
+- View each order's service costs and total cost in NOK.
 - Search orders by reference, customer name, email address, phone number, or bike brand.
 - Filter orders by status, service type, or due date.
 - Change an order's notes and service types.
@@ -162,6 +166,7 @@ Automated tests must cover at least:
 - Automatic due-date assignment, weekend skipping, rejection of weekend dates, and the five-order daily limit.
 - Concurrent submissions and date changes at the capacity boundary.
 - Capacity release on cancellation without automatic rescheduling.
+- Service-cost calculation and restriction of pricing information to authenticated administrators.
 - Server-side validation and persistence failures.
 
 ## Acceptance criteria
@@ -171,11 +176,12 @@ Automated tests must cover at least:
 - A reference lookup returns only the matching order.
 - An email or phone lookup returns every exactly matching order as a separate result.
 - A customer can change notes while an order is `New` and receives an error when attempting the same change in any other status.
-- Only an authenticated administrator can search all orders, change service types or due dates, change status, or delete orders.
+- Only an authenticated administrator can search all orders, view pricing information, change service types or due dates, change status, or delete orders.
 - An administrator cannot move or reopen an order onto a weekday that already contains five non-cancelled orders.
 - Only a cancelled order can be permanently deleted, and deletion requires confirmation.
 - A permanently deleted order is no longer retrievable from the live system by customers or administrators.
 - A failed database operation is reported as a failure and does not create or partially update an order.
+- An order's total cost equals the sum of its selected service costs and is not exposed through customer interfaces or customer API responses.
 
 ## Priorities - Tasks
 

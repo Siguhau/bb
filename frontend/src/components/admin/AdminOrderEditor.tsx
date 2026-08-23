@@ -7,6 +7,7 @@ import type {
   AdminStatusOption,
 } from "../../types/admin";
 import { formatDueDate } from "../../utils/formatDueDate";
+import { formatCost } from "../../utils/formatCost";
 import { createAdminOrderPatch } from "../../utils/createAdminOrderPatch";
 
 type Props = {
@@ -49,6 +50,10 @@ function OrderDetails({ order }: Pick<Props, "order">) {
       <div>
         <dt>Last updated</dt>
         <dd>{new Date(order.updatedAt).toLocaleString()}</dd>
+      </div>
+      <div>
+        <dt>Total cost</dt>
+        <dd>{formatCost(order.totalCost)}</dd>
       </div>
     </dl>
   );
@@ -166,7 +171,10 @@ function OrderEditForm({
                 checked={selectedServices.includes(service.code)}
                 onChange={() => toggleService(service.code)}
               />
-              {service.displayName}
+              <span>{service.displayName}</span>
+              <span className="service-option-cost">
+                {formatCost(service.cost)}
+              </span>
             </label>
           ))}
         </div>
