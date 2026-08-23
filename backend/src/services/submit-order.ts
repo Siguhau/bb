@@ -13,7 +13,7 @@ import { parseOptionalNotes } from "../domain/notes.js";
 import { prisma } from "../infrastructure/prisma.js";
 
 const REFERENCE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const MAX_TRANSACTION_ATTEMPTS = 10;
+const MAX_SUBMISSION_ATTEMPTS = 10;
 const MAX_SCHEDULING_DAYS = 3_660;
 export const MAX_DISCOUNT_CODE_LENGTH = 64;
 
@@ -44,7 +44,7 @@ export class OrderSubmissionValidationError extends Error {
   }
 }
 
-type SubmissionClient = Pick<PrismaClient, "$transaction">;
+type SubmissionClient = Pick<PrismaClient, "capacityReservation" | "order">;
 
 type SubmitOrderOptions = {
   client?: SubmissionClient;
@@ -225,14 +225,14 @@ function isWeekend(calendarDate: string): boolean {
 }
 
 async function findEarliestReservation(
-  transaction: Prisma.TransactionClient,
+  client: SubmissionClient,
   firstDate: string,
 ): Promise<{ dueDate: string; slot: number }> {
   let dueDate = firstDate;
 
   for (let day = 0; day < MAX_SCHEDULING_DAYS; day += 1) {
     if (!isWeekend(dueDate)) {
-      const reservations = await transaction.capacityReservation.findMany({
+      const reservations = await client.capacityReservation.findMany({
         where: { dueDate },
         select: { slot: true },
       });
@@ -250,10 +250,10 @@ async function findEarliestReservation(
   throw new Error("No available scheduling date was found.");
 }
 
-function isRetryableTransactionError(error: unknown): boolean {
+function isRetryablePersistenceError(error: unknown): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&
-    ["P1008", "P2002", "P2024", "P2028", "P2034"].includes(error.code)
+    ["P1008", "P2002", "P2024", "P2034"].includes(error.code)
   );
 }
 
@@ -272,40 +272,34 @@ export async function submitOrder(
     1,
   );
 
-  for (let attempt = 0; attempt < MAX_TRANSACTION_ATTEMPTS; attempt += 1) {
+  for (let attempt = 0; attempt < MAX_SUBMISSION_ATTEMPTS; attempt += 1) {
     const reference = generateReference();
 
     try {
-      const createdOrder = await client.$transaction(
-        async (transaction) => {
-          const { dueDate, slot } = await findEarliestReservation(
-            transaction,
-            firstDate,
-          );
-
-          return transaction.order.create({
-            data: {
-              reference,
-              customerName: input.customerName,
-              phoneNumber: input.phoneNumber,
-              emailAddress: input.emailAddress,
-              bikeBrand: input.bikeBrand,
-              expectedDueDate: dueDate,
-              status: "NEW",
-              notes: input.notes,
-              discountCode: input.discountCode,
-              serviceTypes: {
-                create: input.serviceTypes.map((serviceTypeCode) => ({
-                  serviceType: { connect: { code: serviceTypeCode } },
-                })),
-              },
-              capacityReservation: { create: { slot } },
-            },
-            select: { id: true, expectedDueDate: true },
-          });
-        },
-        { maxWait: 5_000, timeout: 10_000 },
+      const { dueDate, slot } = await findEarliestReservation(
+        client,
+        firstDate,
       );
+      const createdOrder = await client.order.create({
+        data: {
+          reference,
+          customerName: input.customerName,
+          phoneNumber: input.phoneNumber,
+          emailAddress: input.emailAddress,
+          bikeBrand: input.bikeBrand,
+          expectedDueDate: dueDate,
+          status: "NEW",
+          notes: input.notes,
+          discountCode: input.discountCode,
+          serviceTypes: {
+            create: input.serviceTypes.map((serviceTypeCode) => ({
+              serviceType: { connect: { code: serviceTypeCode } },
+            })),
+          },
+          capacityReservation: { create: { slot } },
+        },
+        select: { id: true, expectedDueDate: true },
+      });
 
       const { discountCode: _discountCode, ...customerOrder } = input;
       return {
@@ -326,8 +320,8 @@ export async function submitOrder(
       };
     } catch (error) {
       if (
-        !isRetryableTransactionError(error) ||
-        attempt === MAX_TRANSACTION_ATTEMPTS - 1
+        !isRetryablePersistenceError(error) ||
+        attempt === MAX_SUBMISSION_ATTEMPTS - 1
       ) {
         throw error;
       }

@@ -26,22 +26,16 @@ function submissionClient(reservationsByDate: Record<string, number[]> = {}) {
       expectedDueDate: data.expectedDueDate,
     }),
   );
-  const transaction = {
+  const client = {
     capacityReservation: {
       findMany: vi.fn(async ({ where }: { where: { dueDate: string } }) =>
         (reservationsByDate[where.dueDate] ?? []).map((slot) => ({ slot })),
       ),
     },
     order: { create },
-  };
-  const client = {
-    $transaction: vi.fn(
-      async (operation: (value: typeof transaction) => unknown) =>
-        operation(transaction),
-    ),
-  } as unknown as Pick<PrismaClient, "$transaction">;
+  } as unknown as Pick<PrismaClient, "capacityReservation" | "order">;
 
-  return { client, create, transaction };
+  return { client, create };
 }
 
 describe("order submission validation", () => {
@@ -93,7 +87,7 @@ describe("order submission validation", () => {
     ).rejects.toMatchObject({
       fields: { discountCode: "Enter a valid discount code." },
     });
-    expect(client.$transaction).not.toHaveBeenCalled();
+    expect(client.order.create).not.toHaveBeenCalled();
   });
 });
 
@@ -145,22 +139,26 @@ describe("submitOrder", () => {
     expect(order.expectedDueDate).toBe("2026-08-25");
   });
 
-  it("retries the transaction with a new reference after a unique collision", async () => {
+  it("retries with a new reference after a unique collision", async () => {
     const { client: workingClient } = submissionClient();
     const references = ["AAAAAAAA", "BBBBBBBB"];
     const client = {
-      $transaction: vi
-        .fn()
-        .mockRejectedValueOnce(
-          new Prisma.PrismaClientKnownRequestError("collision", {
-            code: "P2002",
-            clientVersion: "6.19.1",
-          }),
-        )
-        .mockImplementation((operation) =>
-          workingClient.$transaction(operation),
-        ),
-    } as unknown as Pick<PrismaClient, "$transaction">;
+      capacityReservation: workingClient.capacityReservation,
+      order: {
+        create: vi
+          .fn()
+          .mockRejectedValueOnce(
+            new Prisma.PrismaClientKnownRequestError("collision", {
+              code: "P2002",
+              clientVersion: "6.19.1",
+            }),
+          )
+          .mockImplementation(
+            (args: Parameters<typeof workingClient.order.create>[0]) =>
+              workingClient.order.create(args),
+          ),
+      },
+    } as unknown as Pick<PrismaClient, "capacityReservation" | "order">;
 
     const order = await submitOrder(validInput, {
       client,
@@ -169,7 +167,7 @@ describe("submitOrder", () => {
     });
 
     expect(order.reference).toBe("BBBBBBBB");
-    expect(client.$transaction).toHaveBeenCalledTimes(2);
+    expect(client.order.create).toHaveBeenCalledTimes(2);
   });
 });
 
