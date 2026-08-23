@@ -23,6 +23,9 @@ describe("order domain definitions", () => {
       "WHEEL_ADJUSTMENT",
       "CHAIN_REPLACEMENT",
       "BRAKE_MAINTENANCE",
+      "TIRE_REPLACEMENT",
+      "BOUVET_DELUXE_TUNE_UP",
+      "OTHER",
     ]);
   });
 
