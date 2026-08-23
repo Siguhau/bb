@@ -6,6 +6,7 @@ import {
   getAdminAuthConfig,
   type AdminAuthConfig,
 } from "../config/admin-auth.js";
+import { ORDER_STATUSES, SERVICE_TYPES } from "../domain/order.js";
 import {
   readAdminSessionCookie,
   requireAdministrator,
@@ -20,9 +21,18 @@ import {
   revokeAdministratorSession,
 } from "../services/admin-auth.js";
 import {
+  AdminOrderCapacityUnavailableError,
+  AdminOrderDeletionNotAllowedError,
+  AdminOrderMutationValidationError,
+  AdminOrderNotFoundError,
+  deleteCancelledAdminOrder,
+  updateAdminOrder,
+} from "../services/admin-order-mutations.js";
+import {
   AdminReadValidationError,
   adminReadService,
 } from "../services/admin-read.js";
+import { shopLocalCalendarDate } from "../services/submit-order.js";
 
 type CreatedSession = Awaited<ReturnType<typeof createAdministratorSession>>;
 type AdminRouterDependencies = {
@@ -37,6 +47,8 @@ type AdminRouterDependencies = {
   listOrders?: typeof adminReadService.listOrders;
   getOrder?: typeof adminReadService.getOrder;
   getCapacity?: typeof adminReadService.getCapacity;
+  updateOrder?: typeof updateAdminOrder;
+  deleteOrder?: typeof deleteCancelledAdminOrder;
 };
 
 function baseCookieOptions(config: AdminAuthConfig): CookieOptions {
@@ -61,6 +73,8 @@ export function createAdminRouter({
   listOrders = adminReadService.listOrders,
   getOrder = adminReadService.getOrder,
   getCapacity = adminReadService.getCapacity,
+  updateOrder = updateAdminOrder,
+  deleteOrder = deleteCancelledAdminOrder,
 }: AdminRouterDependencies = {}) {
   const router = Router();
 
@@ -129,6 +143,27 @@ export function createAdminRouter({
 
   router.use(authorize);
 
+  router.get("/options", (_request, response) => {
+    const labels: Record<(typeof ORDER_STATUSES)[number], string> = {
+      NEW: "New",
+      IN_PROGRESS: "In progress",
+      WAITING_FOR_CUSTOMER_PICKUP: "Waiting for customer pickup",
+      COMPLETED: "Completed",
+      CANCELLED: "Cancelled",
+    };
+    response.status(200).json({
+      serviceTypes: SERVICE_TYPES,
+      statuses: ORDER_STATUSES.map((code) => ({
+        code,
+        displayName: labels[code],
+      })),
+      today: shopLocalCalendarDate(
+        new Date(),
+        process.env.SHOP_TIME_ZONE ?? "Europe/Oslo",
+      ),
+    });
+  });
+
   router.get("/orders", async (request, response) => {
     try {
       response.status(200).json({ orders: await listOrders(request.query) });
@@ -173,6 +208,51 @@ export function createAdminRouter({
       response
         .status(500)
         .json({ error: "We could not load capacity. Please try again." });
+    }
+  });
+
+  router.patch("/orders/:id", async (request, response) => {
+    try {
+      response.status(200).json({
+        order: await updateOrder(request.params.id, request.body),
+      });
+    } catch (error) {
+      if (error instanceof AdminOrderMutationValidationError) {
+        response
+          .status(400)
+          .json({ error: error.message, fields: error.fields });
+        return;
+      }
+      if (error instanceof AdminOrderNotFoundError) {
+        response.status(404).json({ error: error.message });
+        return;
+      }
+      if (error instanceof AdminOrderCapacityUnavailableError) {
+        response.status(409).json({ error: error.message });
+        return;
+      }
+      response
+        .status(500)
+        .json({ error: "We could not update the order. Please try again." });
+    }
+  });
+
+  router.delete("/orders/:id", async (request, response) => {
+    try {
+      await deleteOrder(request.params.id);
+      response.status(204).send();
+    } catch (error) {
+      if (error instanceof AdminOrderNotFoundError) {
+        response.status(404).json({ error: error.message });
+        return;
+      }
+      if (error instanceof AdminOrderDeletionNotAllowedError) {
+        response.status(409).json({ error: error.message });
+        return;
+      }
+      response
+        .status(500)
+        .json({ error: "We could not delete the order. Please try again." });
     }
   });
 

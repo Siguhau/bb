@@ -1,20 +1,8 @@
-export type ServiceType = {
-  code: string;
-  displayName: string;
-};
+import type { Order } from "./order";
 
-export type CustomerOrder = {
-  id: string;
-  reference: string;
-  customerName: string;
-  phoneNumber: string;
-  emailAddress: string;
-  bikeBrand: string;
-  expectedDueDate: string;
-  status: string;
-  notes: string | null;
-  serviceTypes: ServiceType[];
-};
+export type { ServiceType } from "./order";
+
+export type CustomerOrder = Order;
 
 export type CustomerAccessGrant = {
   token: string;

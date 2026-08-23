@@ -1,5 +1,6 @@
 import type { CustomerAccessGrant, CustomerOrder } from "../../types/customer";
 import CustomerOrderCard from "./CustomerOrderCard";
+import Alert from "../Alert";
 
 type CustomerOrderResultsProps = {
   error: string;
@@ -16,7 +17,7 @@ export default function CustomerOrderResults({
 }: CustomerOrderResultsProps) {
   return (
     <div className="lookup-feedback" aria-live="polite">
-      {error && <p className="error-message">{error}</p>}
+      {error && <Alert>{error}</Alert>}
       {orders.length > 0 && (
         <section aria-labelledby="results-heading">
           <h2 id="results-heading">Your orders</h2>

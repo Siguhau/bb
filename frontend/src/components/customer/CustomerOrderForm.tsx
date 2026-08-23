@@ -1,6 +1,7 @@
 import { type SubmitEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../api/client";
+import Alert from "../Alert";
 import {
   getCustomerOrderOptions,
   submitCustomerOrder,
@@ -105,11 +106,7 @@ export default function CustomerOrderForm({
       </p>
 
       <form className="order-form" onSubmit={handleSubmit}>
-        {formError && (
-          <p className="error-message" role="alert">
-            {formError}
-          </p>
-        )}
+        {formError && <Alert>{formError}</Alert>}
 
         <div className="form-field">
           <label htmlFor="customer-name">Customer name</label>
