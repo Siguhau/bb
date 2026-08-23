@@ -119,6 +119,48 @@ describe("GET /api/customer/order-options", () => {
   });
 });
 
+describe("POST /api/customer/discount-codes/verify", () => {
+  it("normalizes and verifies BB50", async () => {
+    const response = await request(testApp(async () => []))
+      .post("/api/customer/discount-codes/verify")
+      .send({ discountCode: " bb50 " });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      valid: true,
+      discountCode: "BB50",
+      discountPercentage: 50,
+    });
+  });
+
+  it("reports an unrecognized code without treating it as a server error", async () => {
+    const response = await request(testApp(async () => []))
+      .post("/api/customer/discount-codes/verify")
+      .send({ discountCode: "not-a-code" });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ valid: false });
+  });
+
+  it("rejects malformed verification requests", async () => {
+    const response = await request(testApp(async () => []))
+      .post("/api/customer/discount-codes/verify")
+      .send({ discountCode: 50 });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Enter a discount code." });
+  });
+
+  it("rejects excessively long verification requests", async () => {
+    const response = await request(testApp(async () => []))
+      .post("/api/customer/discount-codes/verify")
+      .send({ discountCode: "B".repeat(65) });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Enter a discount code." });
+  });
+});
+
 describe("POST /api/customer/orders", () => {
   it("returns the stored order after a successful submission", async () => {
     const createOrder = vi.fn().mockResolvedValue(submittedOrder);
@@ -202,6 +244,9 @@ describe("POST /api/customer/order-lookups", () => {
       ],
     });
     expect(response.body.orders[0]).not.toHaveProperty("totalCost");
+    expect(response.body.orders[0]).not.toHaveProperty("subtotalCost");
+    expect(response.body.orders[0]).not.toHaveProperty("discountAmount");
+    expect(response.body.orders[0]).not.toHaveProperty("discountCode");
     expect(response.body.orders[0].serviceTypes[0]).not.toHaveProperty("cost");
   });
 
@@ -351,6 +396,9 @@ describe("PATCH /api/customer/orders/:id/notes", () => {
       order: JSON.parse(JSON.stringify(updatedOrder)),
     });
     expect(response.body.order).not.toHaveProperty("totalCost");
+    expect(response.body.order).not.toHaveProperty("subtotalCost");
+    expect(response.body.order).not.toHaveProperty("discountAmount");
+    expect(response.body.order).not.toHaveProperty("discountCode");
     expect(response.body.order.serviceTypes[0]).not.toHaveProperty("cost");
   });
 

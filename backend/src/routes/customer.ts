@@ -1,6 +1,10 @@
 import { Router, type Request } from "express";
 
-import { SERVICE_TYPES } from "../domain/order.js";
+import {
+  SERVICE_TYPES,
+  getDiscount,
+  normalizeDiscountCode,
+} from "../domain/order.js";
 import {
   createConfiguredLookupRateLimiter,
   type LookupRateLimiter,
@@ -19,6 +23,7 @@ import {
 } from "../services/update-customer-notes.js";
 import {
   OrderSubmissionValidationError,
+  MAX_DISCOUNT_CODE_LENGTH,
   submitOrder,
   type SubmittedOrder,
 } from "../services/submit-order.js";
@@ -58,6 +63,30 @@ export function createCustomerRouter({
         code,
         displayName,
       })),
+    });
+  });
+
+  router.post("/discount-codes/verify", (request, response) => {
+    const discountCode = request.body?.discountCode;
+    if (
+      typeof discountCode !== "string" ||
+      discountCode.length > MAX_DISCOUNT_CODE_LENGTH
+    ) {
+      response.status(400).json({ error: "Enter a discount code." });
+      return;
+    }
+
+    const canonicalCode = normalizeDiscountCode(discountCode);
+    const discount = getDiscount(canonicalCode);
+    if (!discount) {
+      response.status(200).json({ valid: false });
+      return;
+    }
+
+    response.status(200).json({
+      valid: true,
+      discountCode: discount.code,
+      discountPercentage: discount.percentage,
     });
   });
 
