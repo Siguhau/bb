@@ -5,10 +5,14 @@ import {
   DAILY_CAPACITY,
   ORDER_STATUSES,
   SERVICE_TYPES,
+  DISCOUNT_CODES,
+  calculateDiscountedTotal,
   calculateTotalCost,
+  getDiscount,
   isCapacitySlotNumber,
   isOrderStatus,
   isServiceTypeCode,
+  normalizeDiscountCode,
 } from "./order.js";
 
 describe("order domain definitions", () => {
@@ -58,5 +62,19 @@ describe("order domain definitions", () => {
     expect(calculateTotalCost(["WHEEL_ADJUSTMENT", "CHAIN_REPLACEMENT"])).toBe(
       650,
     );
+  });
+
+  it("normalizes and recognizes only the configured BB50 discount", () => {
+    expect(DISCOUNT_CODES).toEqual([{ code: "BB50", percentage: 50 }]);
+    expect(normalizeDiscountCode(" bb50 ")).toBe("BB50");
+    expect(normalizeDiscountCode("BB51")).toBeNull();
+    expect(getDiscount("BB50")).toEqual({ code: "BB50", percentage: 50 });
+    expect(getDiscount("BB51")).toBeNull();
+  });
+
+  it("calculates whole-NOK totals after BB50", () => {
+    expect(calculateDiscountedTotal(300, "BB50")).toBe(150);
+    expect(calculateDiscountedTotal(999, "BB50")).toBe(500);
+    expect(calculateDiscountedTotal(999, null)).toBe(999);
   });
 });

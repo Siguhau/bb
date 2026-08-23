@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 
 import {
+  calculateDiscountedTotal,
   calculateTotalCost,
   getServiceType,
   type OrderStatus,
@@ -32,6 +33,7 @@ export type AdminOrderMutationResult = {
   expectedDueDate: string;
   status: OrderStatus;
   notes: string | null;
+  discountCode: string | null;
   createdAt: Date;
   updatedAt: Date;
   serviceTypes: Array<{
@@ -39,6 +41,8 @@ export type AdminOrderMutationResult = {
     displayName: string;
     cost: number;
   }>;
+  subtotalCost: number;
+  discountAmount: number;
   totalCost: number;
 };
 
@@ -74,6 +78,7 @@ const orderResultSelect = {
   expectedDueDate: true,
   status: true,
   notes: true,
+  discountCode: true,
   createdAt: true,
   updatedAt: true,
   serviceTypes: {
@@ -148,14 +153,20 @@ export class PrismaAdminOrderMutationRepository implements AdminOrderMutationRep
             const serviceTypes = order.serviceTypes.map(({ serviceType }) =>
               getServiceType(serviceType.code as ServiceTypeCode),
             );
-            const totalCost = calculateTotalCost(
+            const subtotalCost = calculateTotalCost(
               serviceTypes.map(({ code }) => code),
+            );
+            const totalCost = calculateDiscountedTotal(
+              subtotalCost,
+              order.discountCode,
             );
 
             return {
               ...order,
               status: order.status as OrderStatus,
               serviceTypes,
+              subtotalCost,
+              discountAmount: subtotalCost - totalCost,
               totalCost,
             };
           },

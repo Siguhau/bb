@@ -58,6 +58,43 @@ export function calculateTotalCost(
   );
 }
 
+export const DISCOUNT_CODES = [
+  {
+    code: "BB50",
+    percentage: 50,
+  },
+] as const;
+
+export type DiscountCode = (typeof DISCOUNT_CODES)[number]["code"];
+export type Discount = (typeof DISCOUNT_CODES)[number];
+
+/**
+ * Converts customer-entered discount code text to the canonical stored code.
+ * An unrecognised code returns null.
+ */
+export function normalizeDiscountCode(value: string): DiscountCode | null {
+  const normalized = value.trim().toUpperCase();
+  const discount = DISCOUNT_CODES.find(({ code }) => code === normalized);
+  return discount?.code ?? null;
+}
+
+export function getDiscount(
+  discountCode: string | null | undefined,
+): Discount | null {
+  return DISCOUNT_CODES.find(({ code }) => code === discountCode) ?? null;
+}
+
+/** Returns the final whole-NOK amount after the configured discount. */
+export function calculateDiscountedTotal(
+  subtotal: number,
+  discountCode: string | null | undefined,
+): number {
+  const discount = getDiscount(discountCode);
+  if (!discount) return subtotal;
+
+  return Math.ceil(subtotal * (1 - discount.percentage / 100));
+}
+
 export const DAILY_CAPACITY = 5;
 export const CAPACITY_SLOT_NUMBERS = [1, 2, 3, 4, 5] as const;
 export type CapacitySlotNumber = (typeof CAPACITY_SLOT_NUMBERS)[number];

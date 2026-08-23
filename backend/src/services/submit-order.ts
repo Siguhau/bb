@@ -4,6 +4,8 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import {
   CAPACITY_SLOT_NUMBERS,
   SERVICE_TYPES,
+  normalizeDiscountCode,
+  type DiscountCode,
   isServiceTypeCode,
   type ServiceTypeCode,
 } from "../domain/order.js";
@@ -13,6 +15,7 @@ import { prisma } from "../infrastructure/prisma.js";
 const REFERENCE_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const MAX_TRANSACTION_ATTEMPTS = 10;
 const MAX_SCHEDULING_DAYS = 3_660;
+export const MAX_DISCOUNT_CODE_LENGTH = 64;
 
 export type OrderSubmission = {
   customerName: string;
@@ -21,9 +24,13 @@ export type OrderSubmission = {
   bikeBrand: string;
   serviceTypes: ServiceTypeCode[];
   notes: string | null;
+  discountCode: DiscountCode | null;
 };
 
-export type SubmittedOrder = Omit<OrderSubmission, "serviceTypes"> & {
+export type SubmittedOrder = Omit<
+  OrderSubmission,
+  "serviceTypes" | "discountCode"
+> & {
   id: string;
   reference: string;
   expectedDueDate: string;
@@ -81,6 +88,7 @@ export function parseOrderSubmission(value: unknown): OrderSubmission {
     "bikeBrand",
     "serviceTypes",
     "notes",
+    "discountCode",
   ]);
 
   if (Object.keys(input).some((field) => !allowedFields.has(field))) {
@@ -147,6 +155,21 @@ export function parseOrderSubmission(value: unknown): OrderSubmission {
 
   const notes = parseOptionalNotes(input.notes, errors);
 
+  let discountCode: DiscountCode | null = null;
+  const rawDiscountCode = input.discountCode;
+  if (rawDiscountCode !== undefined && rawDiscountCode !== null) {
+    if (typeof rawDiscountCode !== "string") {
+      errors.discountCode = "Enter a valid discount code.";
+    } else if (rawDiscountCode.length > MAX_DISCOUNT_CODE_LENGTH) {
+      errors.discountCode = `Discount code must be ${MAX_DISCOUNT_CODE_LENGTH} characters or fewer.`;
+    } else if (rawDiscountCode.trim().length > 0) {
+      discountCode = normalizeDiscountCode(rawDiscountCode);
+      if (!discountCode) {
+        errors.discountCode = "Enter a valid discount code.";
+      }
+    }
+  }
+
   if (Object.keys(errors).length > 0) {
     throw new OrderSubmissionValidationError(errors);
   }
@@ -158,6 +181,7 @@ export function parseOrderSubmission(value: unknown): OrderSubmission {
     bikeBrand,
     serviceTypes,
     notes,
+    discountCode,
   };
 }
 
@@ -269,6 +293,7 @@ export async function submitOrder(
               expectedDueDate: dueDate,
               status: "NEW",
               notes: input.notes,
+              discountCode: input.discountCode,
               serviceTypes: {
                 create: input.serviceTypes.map((serviceTypeCode) => ({
                   serviceType: { connect: { code: serviceTypeCode } },
@@ -282,8 +307,9 @@ export async function submitOrder(
         { maxWait: 5_000, timeout: 10_000 },
       );
 
+      const { discountCode: _discountCode, ...customerOrder } = input;
       return {
-        ...input,
+        ...customerOrder,
         id: createdOrder.id,
         reference,
         expectedDueDate: createdOrder.expectedDueDate,

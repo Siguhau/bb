@@ -9,10 +9,10 @@ import { configureSqlite } from "../infrastructure/prisma.js";
 import { submitOrder } from "./submit-order.js";
 
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
-const migrationPath = path.resolve(
-  testDirectory,
+const migrationPaths = [
   "../../prisma/migrations/20260822170000_create_orders_model/migration.sql",
-);
+  "../../prisma/migrations/20260823200000_add_order_discount_code/migration.sql",
+].map((value) => path.resolve(testDirectory, value));
 
 let temporaryDirectory: string;
 let client: PrismaClient;
@@ -40,10 +40,11 @@ beforeAll(async () => {
   client = new PrismaClient({
     datasourceUrl: `file:${path.join(temporaryDirectory, "test.db")}`,
   });
-  const migration = await readFile(migrationPath, "utf8");
-
-  for (const statement of migration.split(/;\s*(?:\r?\n|$)/)) {
-    if (statement.trim()) await client.$executeRawUnsafe(statement);
+  for (const migrationPath of migrationPaths) {
+    const migration = await readFile(migrationPath, "utf8");
+    for (const statement of migration.split(/;\s*(?:\r?\n|$)/)) {
+      if (statement.trim()) await client.$executeRawUnsafe(statement);
+    }
   }
 
   await configureSqlite(client);
@@ -95,6 +96,25 @@ describe("submitOrder with SQLite", () => {
     });
 
     expect(order.reference).toBe("COLLIDE2");
+  });
+
+  it("persists only the normalized valid discount code", async () => {
+    const order = await submitOrder(
+      { ...input(9), discountCode: " bb50 " },
+      {
+        client,
+        generateReference: () => "DISCOUNT",
+        now: () => new Date("2026-08-21T10:00:00Z"),
+      },
+    );
+
+    expect(order).not.toHaveProperty("discountCode");
+    await expect(
+      client.order.findUnique({
+        where: { reference: "DISCOUNT" },
+        select: { discountCode: true },
+      }),
+    ).resolves.toEqual({ discountCode: "BB50" });
   });
 
   it("rolls back the order when a nested service write fails", async () => {

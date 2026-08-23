@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 
 import {
+  calculateDiscountedTotal,
   calculateTotalCost,
   getServiceType,
   type ServiceTypeCode,
@@ -17,6 +18,7 @@ export const completeOrderSelection = {
   expectedDueDate: true,
   status: true,
   notes: true,
+  discountCode: true,
   createdAt: true,
   updatedAt: true,
   serviceTypes: {
@@ -39,6 +41,8 @@ export type CompleteOrder = Omit<StoredOrder, "serviceTypes"> & {
     displayName: string;
     cost: number;
   }>;
+  subtotalCost: number;
+  discountAmount: number;
   totalCost: number;
 };
 
@@ -66,13 +70,16 @@ function toCompleteOrder({
   const pricedServiceTypes = serviceTypes.map(({ serviceType }) =>
     getServiceType(serviceType.code as ServiceTypeCode),
   );
-  const totalCost = calculateTotalCost(
+  const subtotalCost = calculateTotalCost(
     pricedServiceTypes.map(({ code }) => code),
   );
+  const totalCost = calculateDiscountedTotal(subtotalCost, order.discountCode);
 
   return {
     ...order,
     serviceTypes: pricedServiceTypes,
+    subtotalCost,
+    discountAmount: subtotalCost - totalCost,
     totalCost,
   };
 }

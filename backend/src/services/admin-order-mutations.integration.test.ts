@@ -16,10 +16,11 @@ import {
 } from "./admin-order-mutations.js";
 
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
-const migrationPath = path.resolve(
-  testDirectory,
+const migrationPaths = [
   "../../prisma/migrations/20260822170000_create_orders_model/migration.sql",
-);
+  "../../prisma/migrations/20260823182004_add-new-service-types/migration.sql",
+  "../../prisma/migrations/20260823200000_add_order_discount_code/migration.sql",
+].map((value) => path.resolve(testDirectory, value));
 
 let temporaryDirectory: string;
 let client: PrismaClient;
@@ -33,11 +34,13 @@ async function seedOrder({
   status = "NEW",
   slot,
   serviceTypes = ["BRAKE_MAINTENANCE"],
+  discountCode,
 }: {
   dueDate: string;
   status?: OrderStatus;
   slot?: number;
   serviceTypes?: string[];
+  discountCode?: string;
 }) {
   referenceSequence += 1;
   return client.order.create({
@@ -49,6 +52,7 @@ async function seedOrder({
       bikeBrand: "Trek",
       expectedDueDate: dueDate,
       status,
+      discountCode,
       serviceTypes: {
         create: serviceTypes.map((code) => ({
           serviceType: { connect: { code } },
@@ -102,9 +106,11 @@ beforeAll(async () => {
   concurrentClient = new PrismaClient({
     datasourceUrl: `file:${path.join(temporaryDirectory, "test.db")}`,
   });
-  const migration = await readFile(migrationPath, "utf8");
-  for (const statement of migration.split(/;\s*(?:\r?\n|$)/)) {
-    if (statement.trim()) await client.$executeRawUnsafe(statement);
+  for (const migrationPath of migrationPaths) {
+    const migration = await readFile(migrationPath, "utf8");
+    for (const statement of migration.split(/;\s*(?:\r?\n|$)/)) {
+      if (statement.trim()) await client.$executeRawUnsafe(statement);
+    }
   }
   await configureSqlite(client);
   await configureSqlite(concurrentClient);
@@ -152,6 +158,27 @@ describe("admin order mutations with SQLite", () => {
       order!.serviceTypes.map(({ serviceTypeCode }) => serviceTypeCode),
     ).toEqual(["CHAIN_REPLACEMENT", "WHEEL_ADJUSTMENT"]);
     await expectReservationInvariant(id);
+  });
+
+  it("recalculates a rounded-up discounted total when services change", async () => {
+    const { id } = await seedOrder({
+      dueDate: "2026-08-24",
+      slot: 1,
+      discountCode: "BB50",
+    });
+
+    const order = await updateAdminOrder(
+      id,
+      { serviceTypes: ["BOUVET_DELUXE_TUNE_UP"] },
+      repository,
+    );
+
+    expect(order).toMatchObject({
+      discountCode: "BB50",
+      subtotalCost: 999,
+      discountAmount: 499,
+      totalCost: 500,
+    });
   });
 
   it("moves to a past weekday and releases the source slot", async () => {
