@@ -1,9 +1,15 @@
-import express, { type Express, type Request, type Response } from "express";
+import express, {
+  type Express,
+  type Request,
+  type RequestHandler,
+  type Response,
+} from "express";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import adminRouter from "./routes/admin.js";
+import { requireAdministrator } from "./middleware/admin-auth.js";
+import { createAdminRouter } from "./routes/admin.js";
 import customerRouter from "./routes/customer.js";
 
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -12,7 +18,13 @@ const frontendDistDirectory = path.resolve(
   "../../frontend/dist",
 );
 
-export function createApp(): Express {
+type AppDependencies = {
+  authorizeAdmin?: RequestHandler;
+};
+
+export function createApp({
+  authorizeAdmin = requireAdministrator,
+}: AppDependencies = {}): Express {
   const app = express();
 
   app.disable("x-powered-by");
@@ -27,7 +39,7 @@ export function createApp(): Express {
   });
 
   app.use("/api/customer", customerRouter);
-  app.use("/api/admin", adminRouter);
+  app.use("/api/admin", createAdminRouter({ authorize: authorizeAdmin }));
   app.use("/api", (_request: Request, response: Response) => {
     response.status(404).json({ error: "Not found" });
   });

@@ -11,3 +11,14 @@ describe("GET /api/health", () => {
     expect(response.body).toEqual({ status: "ok" });
   });
 });
+
+describe("admin access", () => {
+  it("requires administrator authentication for admin data routes", async () => {
+    const response = await request(createApp()).get("/api/admin/orders");
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: "Administrator authentication is required.",
+    });
+  });
+});

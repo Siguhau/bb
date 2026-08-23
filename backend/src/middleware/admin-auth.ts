@@ -7,7 +7,7 @@ import {
 } from "../services/admin-auth.js";
 
 export type AdminResponseLocals = {
-  administrator: AuthenticatedAdministrator;
+  administrator?: AuthenticatedAdministrator;
 };
 
 export function readAdminSessionCookie(request: Request): string | null {

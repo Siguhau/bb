@@ -1,4 +1,4 @@
-import { Router, type CookieOptions } from "express";
+import { Router, type CookieOptions, type RequestHandler } from "express";
 
 import {
   ADMIN_SESSION_COOKIE_NAME,
@@ -19,9 +19,14 @@ import {
   InvalidAdministratorCredentialsError,
   revokeAdministratorSession,
 } from "../services/admin-auth.js";
+import {
+  AdminReadValidationError,
+  adminReadService,
+} from "../services/admin-read.js";
 
 type CreatedSession = Awaited<ReturnType<typeof createAdministratorSession>>;
 type AdminRouterDependencies = {
+  authorize?: RequestHandler;
   config?: AdminAuthConfig;
   createSession?: (input: {
     email: string;
@@ -29,6 +34,9 @@ type AdminRouterDependencies = {
   }) => Promise<CreatedSession>;
   revokeSession?: (token: string) => Promise<void>;
   loginRateLimiter?: AdminLoginRateLimiter;
+  listOrders?: typeof adminReadService.listOrders;
+  getOrder?: typeof adminReadService.getOrder;
+  getCapacity?: typeof adminReadService.getCapacity;
 };
 
 function baseCookieOptions(config: AdminAuthConfig): CookieOptions {
@@ -41,6 +49,7 @@ function baseCookieOptions(config: AdminAuthConfig): CookieOptions {
 }
 
 export function createAdminRouter({
+  authorize = requireAdministrator,
   config = getAdminAuthConfig(),
   createSession = (input) =>
     createAdministratorSession(input, { sessionTtlMs: config.sessionTtlMs }),
@@ -49,6 +58,9 @@ export function createAdminRouter({
     attemptLimit: config.loginAttemptLimit,
     blockDurationMs: config.loginBlockDurationMs,
   }),
+  listOrders = adminReadService.listOrders,
+  getOrder = adminReadService.getOrder,
+  getCapacity = adminReadService.getCapacity,
 }: AdminRouterDependencies = {}) {
   const router = Router();
 
@@ -115,8 +127,55 @@ export function createAdminRouter({
     }
   });
 
-  // Mount all future administrator data routes after this boundary.
-  router.use(requireAdministrator);
+  router.use(authorize);
+
+  router.get("/orders", async (request, response) => {
+    try {
+      response.status(200).json({ orders: await listOrders(request.query) });
+    } catch (error) {
+      if (error instanceof AdminReadValidationError) {
+        response
+          .status(400)
+          .json({ error: error.message, fields: error.fields });
+        return;
+      }
+      response
+        .status(500)
+        .json({ error: "We could not load orders. Please try again." });
+    }
+  });
+
+  router.get("/orders/:id", async (request, response) => {
+    try {
+      const order = await getOrder(request.params.id);
+      if (!order) {
+        response.status(404).json({ error: "Order not found." });
+        return;
+      }
+      response.status(200).json({ order });
+    } catch {
+      response
+        .status(500)
+        .json({ error: "We could not load the order. Please try again." });
+    }
+  });
+
+  router.get("/capacity", async (request, response) => {
+    try {
+      response.status(200).json({ days: await getCapacity(request.query) });
+    } catch (error) {
+      if (error instanceof AdminReadValidationError) {
+        response
+          .status(400)
+          .json({ error: error.message, fields: error.fields });
+        return;
+      }
+      response
+        .status(500)
+        .json({ error: "We could not load capacity. Please try again." });
+    }
+  });
+
   return router;
 }
 
