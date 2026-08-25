@@ -89,12 +89,20 @@ authoritative definition in the backend.
 
 ## API boundaries
 
-The initial API is divided into customer and admin routes.
+The API exposes a health check and is otherwise divided into customer and admin
+routes.
+
+### System routes
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Report whether the application process is healthy |
 
 ### Customer routes
 
 | Method | Route | Purpose |
 | --- | --- | --- |
+| `GET` | `/api/customer/order-options` | List customer-visible service type options |
 | `POST` | `/api/customer/orders` | Submit an order |
 | `POST` | `/api/customer/discount-codes/verify` | Verify an optional discount code |
 | `POST` | `/api/customer/order-lookups` | Look up orders by one exact value |
@@ -109,6 +117,7 @@ normal access logs.
 | --- | --- | --- |
 | `POST` | `/api/admin/session` | Sign in |
 | `DELETE` | `/api/admin/session` | Sign out |
+| `GET` | `/api/admin/options` | List service types, statuses, and the current shop-local date |
 | `GET` | `/api/admin/orders` | List, search, and filter orders |
 | `GET` | `/api/admin/orders/:id` | View one order |
 | `PATCH` | `/api/admin/orders/:id` | Update allowed order fields |
