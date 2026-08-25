@@ -200,7 +200,31 @@ Automated tests must cover at least:
 
 ## Priorities - Tasks
 
-1. Create the orders model
-2. Create the basic theme
-3. Create the customer landing page where they can either search for their order or place a new order
-4. Create the view where customers can create an order
+1. Add basic project structure.
+2. Create the orders model
+3. Create the basic theme
+4. Create the customer landing page where they can either search for their order or place a new order
+5. Create the view where customers can create an order
+6. Create admin functionality
+   1. Create admin order
+   2. Create migrations
+   3. Create admin auth and routes
+   4. Create admin order interface
+7. Add customer notes field
+8. Review UI work - User test
+
+Redo Priorities:
+
+1. Add Reference code copy button
+2. Increase the service type options
+3. QoL: Simple script for adding migrations
+4. Add item pricing and descount options
+   1. Add item pricing
+   2. Add discount support BE
+   3. Add discount support FE
+5. Small UI improvement: Admin login
+
+Future Work:
+
+- Deployment - Tested
+- E2E - Under development

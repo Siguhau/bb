@@ -95,3 +95,36 @@ pnpm build
 
 See [the requirements](docs/requirements.md) and
 [the architecture](docs/architecture.md) for the agreed behavior and design.
+
+## Assumptions
+
+This web application is not meant to be production ready yet, for that some architectural decisions should be made to provide a more stable environment. Examples of this is the choice of backend and db. Both Express and SQLite work for a simple mvp, however, they might face issues running in a container 24/7.
+There is no monitoring added.
+
+Customers would not need an account to submit an order
+Customers can use either the reference code, email or phone number to fetch orders, there is no need to use two or all three.
+
+Orders are given the next available day as the due date. Not the same day.
+We ignore holidays for now.
+No phone or email integration is added.
+Each order represents one bike.
+Admin auth is simplified for this demo
+The demo will be done on localhost, however the application is running live on https://bouvetbike.siguhau.no/
+
+## Reflection
+
+Using AI tools to help productivity and decision making has already become the new normal. It is generally easy to make a demo, and it can be very helpful to go deep, find angles and ambiguity.
+
+For me, this project displays exactly that. The creation of the requirement prompt, which was a manual task took some time, and the following session I had with GPT 5.6 Sol made that prompt into something implementable.
+
+I am quite happy with the fact that the three-tier application worked out of the box. I did not do a lot of fighting with the AI after the initial three changes (Requirements, architecture and project setup).
+
+I think however there is a lot of places where I could have fought more. Especially when it comes to keeping the components small with less concerns.
+
+The bulk part of my work has been review, and that has been though. I had longer review sessions which I really do not like. I struggled to find larger issues with the PRs, even though, when I worked on them myself, they screamed at me.
+
+I wish I did a few things more manually, the first would be the project setup. I wanted to save some time running a prompt rather than running the different install scripts. I do however think that if I put more effort into making a structure of what I wanted, the AI would follow it better.
+
+I also am unsure about how well I solved the task. I feel like I did not get to show much of me, but more how I work with AI. I usually dont do so much so fast, and the review was difficult. I should have tried more tools for review. Additionally, I wish the solution looked less vibe coded.
+
+Lastly, I have not update the architecture after I was "done" and there are discrepancies there, like if it should be running in production environment, monitoring and backed up.
